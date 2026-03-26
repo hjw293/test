@@ -1,0 +1,26 @@
+# 前端项目
+node_modules
+dist
+*.log
+.DS_Store
+.env.local
+.env.*.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# 后端项目
+target
+.mvn
+*.class
+.classpath
+.project
+.settings
+*.jar
+*.war
+
+# 数据库
+*.sql~
