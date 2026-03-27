@@ -108,7 +108,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import * as echarts from 'echarts'
 import axios from 'axios'
 
-const API_URL = 'http://192.168.194.188:8080/api/data'
+const API_URL = 'http://localhost:8080/api/data'
 
 const chartRef = ref(null)
 const loading = ref(false)
@@ -229,7 +229,7 @@ const fetchData = async () => {
         'Content-Type': 'application/json'
       }
     })
-    
+
     if (response.data.code === 200) {
       rawData.value = response.data.data || {}
       updateChart()
@@ -453,7 +453,7 @@ const statistics = computed(() => {
   const totalPoints = Object.values(rawData.value).reduce((sum, data) => sum + data.length, 0)
   const allValues = Object.values(rawData.value).flat().map(item => item.value)
   const avgValue = allValues.length > 0 ? (allValues.reduce((a, b) => a + b, 0) / allValues.length).toFixed(2) : 0
-  
+
   return [
     { label: '设备数量', value: deviceCount },
     { label: '数据点总数', value: totalPoints },

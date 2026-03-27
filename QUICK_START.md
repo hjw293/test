@@ -15,22 +15,6 @@
 # 使用 MySQL 命令行或工具（如 MySQL Workbench、Navicat）
 # 执行以下命令：
 
-# 1. 登录 MySQL
-mysql -u root -p
-
-# 2. 执行 SQL 脚本
-source /path/to/schema.sql;
-
-# 或者直接使用 MySQL 客户端工具导入 schema.sql 文件
-```
-
-**验证数据库**
-```bash
-mysql -u root -p
-USE testdb;
-SELECT * FROM sensor_data;
-```
-
 ### 步骤 2: 启动后端服务
 
 ```bash
