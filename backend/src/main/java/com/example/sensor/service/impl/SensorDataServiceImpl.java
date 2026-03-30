@@ -34,7 +34,7 @@ public class SensorDataServiceImpl extends ServiceImpl<SensorDataMapper, SensorD
     private RedisTemplate<String, Object> redisTemplate;
 
     private static final String CACHE_KEY = "sensor:data:grouped";
-    private static final long CACHE_EXPIRE = 60; // 缓存过期时间（分钟）
+    private static final long CACHE_EXPIRE = 5; // 缓存过期时间（分钟）
 
     /**
      * 应用启动后，进行缓存预热
