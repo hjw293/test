@@ -190,4 +190,33 @@ public class SensorDataServiceImpl extends ServiceImpl<SensorDataMapper, SensorD
             throw new RuntimeException("RedisTemplate 为 null");
         }
     }
+
+    /**
+     * 刷新缓存（清除旧缓存并重新加载数据）
+     */
+    @Override
+    public void refreshCache() {
+        logger.info("开始刷新缓存...");
+        try {
+            // 清除旧缓存
+            clearCache();
+
+            // 重新加载数据到缓存
+            long startTime = System.currentTimeMillis();
+
+            // 查询所有数据
+            List<SensorData> allData = this.list();
+            Map<String, List<SensorData>> result = allData.stream()
+                    .collect(Collectors.groupingBy(SensorData::getDevice));
+
+            // 存入 Redis
+            redisTemplate.opsForValue().set(CACHE_KEY, result, CACHE_EXPIRE, TimeUnit.MINUTES);
+
+            long duration = System.currentTimeMillis() - startTime;
+            logger.info("缓存刷新完成！耗时: {}ms, 数据量: {} 条", duration, allData.size());
+        } catch (Exception e) {
+            logger.error("缓存刷新失败: ", e);
+            throw new RuntimeException("缓存刷新失败: " + e.getMessage(), e);
+        }
+    }
 }

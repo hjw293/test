@@ -224,6 +224,15 @@ const fetchData = async () => {
   loading.value = true
   errorMessage.value = ''
   try {
+    // 先刷新缓存（清除旧缓存并重新加载数据）
+    try {
+      await axios.post('http://localhost:8080/api/refresh-cache')
+      console.log('缓存刷新成功')
+    } catch (refreshError) {
+      console.warn('刷新缓存失败，继续获取数据:', refreshError.message)
+    }
+
+    // 获取数据
     const response = await axios.get(API_URL, {
       headers: {
         'Content-Type': 'application/json'

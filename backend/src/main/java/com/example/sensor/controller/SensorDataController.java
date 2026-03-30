@@ -80,4 +80,40 @@ public class SensorDataController {
         }
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * 清除Redis缓存
+     * POST /api/clear-cache
+     */
+    @PostMapping("/clear-cache")
+    public ResponseEntity<Map<String, Object>> clearCache() {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            ((com.example.sensor.service.impl.SensorDataServiceImpl) sensorDataService).clearCache();
+            response.put("code", 200);
+            response.put("message", "缓存已清除，下次请求将从数据库重新加载数据");
+        } catch (Exception e) {
+            response.put("code", 500);
+            response.put("message", "清除缓存失败: " + e.getMessage());
+        }
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 刷新Redis缓存（清除并重新加载）
+     * POST /api/refresh-cache
+     */
+    @PostMapping("/refresh-cache")
+    public ResponseEntity<Map<String, Object>> refreshCache() {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            sensorDataService.refreshCache();
+            response.put("code", 200);
+            response.put("message", "缓存已刷新，数据已从数据库重新加载");
+        } catch (Exception e) {
+            response.put("code", 500);
+            response.put("message", "刷新缓存失败: " + e.getMessage());
+        }
+        return ResponseEntity.ok(response);
+    }
 }

@@ -29,4 +29,9 @@ public interface SensorDataService extends IService<SensorData> {
      * 测试Redis连接
      */
     void testRedisConnection();
+
+    /**
+     * 刷新缓存（清除旧缓存并重新加载数据）
+     */
+    void refreshCache();
 }

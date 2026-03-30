@@ -30,3 +30,11 @@ mybatis-plus:
 # 应用配置
 server:
   port: 8080
+  compression:
+    enabled: true
+    mime-types:
+      - application/json
+      - text/html
+      - text/xml
+      - text/plain
+    min-response-size: 2048
