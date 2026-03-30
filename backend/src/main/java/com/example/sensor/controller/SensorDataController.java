@@ -62,4 +62,22 @@ public class SensorDataController {
 
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * 测试Redis连接
+     * GET /api/test-redis
+     */
+    @GetMapping("/test-redis")
+    public ResponseEntity<Map<String, Object>> testRedisConnection() {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            sensorDataService.testRedisConnection();
+            response.put("code", 200);
+            response.put("message", "Redis连接测试成功");
+        } catch (Exception e) {
+            response.put("code", 500);
+            response.put("message", "Redis连接测试失败: " + e.getMessage());
+        }
+        return ResponseEntity.ok(response);
+    }
 }

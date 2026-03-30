@@ -24,4 +24,9 @@ public interface SensorDataService extends IService<SensorData> {
      * @return 分页结果，包含数据和总数
      */
     Map<String, Object> getDataGroupBySourceFileWithPage(int pageNum, int pageSize);
+
+    /**
+     * 测试Redis连接
+     */
+    void testRedisConnection();
 }

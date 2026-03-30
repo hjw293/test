@@ -11,6 +11,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -68,6 +70,22 @@ public class SensorDataServiceImpl extends ServiceImpl<SensorDataMapper, SensorD
         long startTime = System.currentTimeMillis();
 
         try {
+            logger.debug("尝试从Redis缓存获取数据...");
+            logger.debug("RedisTemplate: {}", redisTemplate);
+            if (redisTemplate != null) {
+                logger.debug("RedisTemplate.getConnectionFactory(): {}", redisTemplate.getConnectionFactory());
+                RedisConnectionFactory connectionFactory = redisTemplate.getConnectionFactory();
+                if (connectionFactory != null) {
+                    logger.debug("ConnectionFactory class: {}", connectionFactory.getClass().getName());
+                    try {
+                        RedisConnection connection = connectionFactory.getConnection();
+                        logger.debug("成功获取Redis连接: {}", connection);
+                        connection.close();
+                    } catch (Exception e) {
+                        logger.error("获取Redis连接失败: {}", e.getMessage(), e);
+                    }
+                }
+            }
             // 尝试从缓存获取
             Map<String, List<SensorData>> cachedData = (Map<String, List<SensorData>>) redisTemplate.opsForValue().get(CACHE_KEY);
             if (cachedData != null) {
@@ -78,6 +96,7 @@ public class SensorDataServiceImpl extends ServiceImpl<SensorDataMapper, SensorD
             logger.debug("缓存未命中，从数据库查询...");
         } catch (Exception e) {
             logger.warn("Redis 连接失败，降级到数据库查询: {}", e.getMessage());
+            e.printStackTrace();
         }
 
         // 缓存未命中或 Redis 连接失败，从数据库查询
@@ -138,6 +157,37 @@ public class SensorDataServiceImpl extends ServiceImpl<SensorDataMapper, SensorD
             logger.info("缓存已清除");
         } catch (Exception e) {
             logger.error("清除缓存失败: ", e);
+        }
+    }
+
+    /**
+     * 测试Redis连接
+     */
+    @Override
+    public void testRedisConnection() {
+        logger.debug("测试Redis连接...");
+        logger.debug("RedisTemplate: {}", redisTemplate);
+        if (redisTemplate != null) {
+            logger.debug("RedisTemplate.getConnectionFactory(): {}", redisTemplate.getConnectionFactory());
+            RedisConnectionFactory connectionFactory = redisTemplate.getConnectionFactory();
+            if (connectionFactory != null) {
+                logger.debug("ConnectionFactory class: {}", connectionFactory.getClass().getName());
+                try {
+                    RedisConnection connection = connectionFactory.getConnection();
+                    logger.debug("成功获取Redis连接: {}", connection);
+                    connection.close();
+                    logger.info("Redis连接测试成功！");
+                } catch (Exception e) {
+                    logger.error("获取Redis连接失败: {}", e.getMessage(), e);
+                    throw new RuntimeException("Redis连接失败: " + e.getMessage(), e);
+                }
+            } else {
+                logger.error("RedisConnectionFactory 为 null");
+                throw new RuntimeException("RedisConnectionFactory 为 null");
+            }
+        } else {
+            logger.error("RedisTemplate 为 null");
+            throw new RuntimeException("RedisTemplate 为 null");
         }
     }
 }

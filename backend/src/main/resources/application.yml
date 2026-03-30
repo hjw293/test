@@ -1,37 +1,32 @@
 spring:
-  application:
-    name: sensor-backend
+  # 数据库配置
   datasource:
-    url: jdbc:mysql://localhost:3306/testdb?useSSL=false&serverTimezone=UTC&characterEncoding=utf8
+    url: jdbc:mysql://localhost:3306/testdb?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
     username: root
     password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
-  jpa:
-    show-sql: true
-    hibernate:
-      ddl-auto: validate
-  redis:
-    host: localhost
-    port: 6379
-    password:
-    database: 0
-    timeout: 2000ms
-    jedis:
+
+  # Redis配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      #password: 123456
+      database: 0
+      timeout: 10000
       pool:
         max-active: 8
+        max-wait: -1
         max-idle: 8
         min-idle: 0
-        max-wait: -1ms
 
+# MyBatis-Plus配置
 mybatis-plus:
+  mapper-locations: classpath:mapper/**/*.xml
+  type-aliases-package: com.example.redis_test.entity
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
-  mapper-locations: classpath*:mapper/*.xml
-  type-aliases-package: com.example.sensor.entity
 
+# 应用配置
 server:
   port: 8080
-
-logging:
-  level:
-    com.example.sensor: DEBUG
