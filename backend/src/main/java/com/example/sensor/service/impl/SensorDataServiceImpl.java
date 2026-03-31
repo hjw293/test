@@ -54,18 +54,18 @@ public class SensorDataServiceImpl extends ServiceImpl<SensorDataMapper, SensorD
         groupedByDevice.forEach((device, deviceData) -> {
             // 按日期+时间分组（同一设备、同一日期、同一时间点合并）
             Map<String, List<SensorData>> groupedByDateTime = new HashMap<>();
-            
+
             deviceData.forEach(item -> {
-                if (item.getTimestamp() != null && item.getDate() != null) {
+                if (item.getTimestamp() != null && item.getDate() != null && item.getDevice() != null) {
                     java.util.Date date = new java.util.Date(item.getTimestamp());
                     int hours = date.getHours();
                     int minutes = date.getMinutes();
                     int seconds = date.getSeconds();
-                    
+
                     // 创建键：日期_时间 (例如: "01_08:00:00")
-                    String dateTimeKey = item.getDate() + "_" + 
+                    String dateTimeKey = item.getDate() + "_" +
                                       String.format("%02d:%02d:%02d", hours, minutes, seconds);
-                    
+
                     if (!groupedByDateTime.containsKey(dateTimeKey)) {
                         groupedByDateTime.put(dateTimeKey, new ArrayList<>());
                     }
@@ -167,6 +167,11 @@ public class SensorDataServiceImpl extends ServiceImpl<SensorDataMapper, SensorD
 
         // 缓存未命中或 Redis 连接失败，从数据库查询
         List<SensorData> allData = this.list();
+
+        // 过滤掉设备名称为null的数据
+        allData = allData.stream()
+                .filter(item -> item.getDevice() != null)
+                .collect(Collectors.toList());
         
         // 聚合数据：合并相同时间戳的数据，计算平均值
         Map<String, List<SensorData>> result = aggregateData(allData);
