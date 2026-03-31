@@ -33,6 +33,13 @@
                     传感器数据曲线图
                   </span>
                   <span 
+                    :class="{ active: activeTab === 'compare' }" 
+                    @click="activeTab = 'compare'"
+                    class="tab-item"
+                  >
+                    对比分析
+                  </span>
+                  <span 
                     :class="{ active: activeTab === 'table' }" 
                     @click="activeTab = 'table'"
                     class="tab-item"
@@ -51,6 +58,32 @@
             <div v-loading="loading">
               <!-- 图表视图 -->
               <div v-if="activeTab === 'chart'" class="chart-container">
+                <div class="time-range-selector">
+                  <span class="time-label">时间段：</span>
+                  <el-time-picker
+                    v-model="startTime"
+                    placeholder="开始时间"
+                    format="HH:mm:ss"
+                    value-format="HH:mm:ss"
+                    @change="handleTimeRangeChange"
+                  />
+                  <span class="time-separator">至</span>
+                  <el-time-picker
+                    v-model="endTime"
+                    placeholder="结束时间"
+                    format="HH:mm:ss"
+                    value-format="HH:mm:ss"
+                    @change="handleTimeRangeChange"
+                  />
+                  <el-button
+                    v-if="startTime || endTime"
+                    type="danger"
+                    size="small"
+                    @click="clearTimeRange"
+                  >
+                    清除筛选
+                  </el-button>
+                </div>
                 <div ref="chartRef" style="width: 100%; height: 500px;"></div>
               </div>
               
@@ -73,6 +106,36 @@
                     @size-change="handleSizeChange"
                     @current-change="handleCurrentChange"
                   />
+                </div>
+              </div>
+
+              <!-- 对比分析视图 -->
+              <div v-else-if="activeTab === 'compare'" class="compare-container">
+                <div v-if="compareDevices.length === 0" class="compare-empty">
+                  <el-empty description="请在左侧设备导航中选择要对比的设备（支持多选）">
+                    <template #image>
+                      <div style="font-size: 64px; color: #ddd;">📊</div>
+                    </template>
+                  </el-empty>
+                </div>
+                <div v-else class="compare-charts">
+                  <div
+                    v-for="(device, index) in compareDevices"
+                    :key="device"
+                    class="compare-chart-item"
+                  >
+                    <div class="compare-chart-header">
+                      <span class="compare-chart-title">{{ device }}</span>
+                      <el-button
+                        type="danger"
+                        size="small"
+                        :icon="Close"
+                        circle
+                        @click="removeCompareDevice(device)"
+                      />
+                    </div>
+                    <div :ref="el => setCompareChartRef(el, index)" class="compare-chart"></div>
+                  </div>
                 </div>
               </div>
               
@@ -107,6 +170,7 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import * as echarts from 'echarts'
 import axios from 'axios'
+import { Close } from '@element-plus/icons-vue'
 
 const API_URL = 'http://localhost:8080/api/data'
 
@@ -119,6 +183,15 @@ const activeTab = ref('chart')
 const currentPage = ref(1)
 const pageSize = ref(10)
 let chart = null
+
+// 对比分析相关状态
+const compareDevices = ref([])
+const compareCharts = ref([])
+const compareChartRefs = ref([])
+
+// 时间范围选择
+const startTime = ref('')
+const endTime = ref('')
 
 // 树形数据结构
 const treeData = computed(() => {
@@ -188,7 +261,22 @@ const treeData = computed(() => {
 // 处理树形节点点击
 const handleTreeClick = (data) => {
   if (data.device) {
-    selectedDevice.value = data.device
+    if (activeTab.value === 'compare') {
+      // 对比分析模式：多选设备
+      const index = compareDevices.value.indexOf(data.device)
+      if (index > -1) {
+        // 已选中，取消选中
+        compareDevices.value.splice(index, 1)
+      } else {
+        // 未选中，添加到选中列表
+        compareDevices.value.push(data.device)
+      }
+      // 更新对比分析图表
+      updateCompareCharts()
+    } else {
+      // 普通模式：单选设备
+      selectedDevice.value = data.device
+    }
   }
 }
 
@@ -217,6 +305,17 @@ const formatTime = (timestamp) => {
     second: '2-digit',
     hour12: false
   })
+}
+
+// 日期格式化为 YYYY-MM-DD HH:mm:ss 格式
+const formatDate = (date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 }
 
 // 获取后端数据
@@ -250,6 +349,11 @@ const fetchData = async () => {
         }
       }
 
+      // 不自动设置时间范围，让用户看到全部数据
+      // 清除之前的时间范围选择
+      startTime.value = ''
+      endTime.value = ''
+
       updateChart()
     } else {
       errorMessage.value = response.data.message || '获取数据失败'
@@ -272,7 +376,7 @@ const updateChart = () => {
     }, 50)
     return
   }
-  
+
   // 初始化 ECharts
   if (!chart) {
     chart = echarts.init(chartRef.value)
@@ -281,34 +385,76 @@ const updateChart = () => {
     // 确保图表大小正确
     chart.resize()
   }
-  
+
   // 准备数据
   const allTimestamps = new Set()
   const series = []
-  
+
   // 过滤设备数据
   const filteredData = selectedDevice.value === null
     ? rawData.value
     : { [selectedDevice.value]: rawData.value[selectedDevice.value] }
-  
-  // 收集所有时间戳并去重
+
+  // 时间范围过滤
+  let filterStartTime = null
+  let filterEndTime = null
+  if (startTime.value || endTime.value) {
+    // 将时间转换为秒数，便于比较
+    if (startTime.value) {
+      const [hours, minutes, seconds] = startTime.value.split(':').map(Number)
+      filterStartTime = hours * 3600 + minutes * 60 + (seconds || 0)
+    }
+
+    if (endTime.value) {
+      const [hours, minutes, seconds] = endTime.value.split(':').map(Number)
+      filterEndTime = hours * 3600 + minutes * 60 + (seconds || 59)
+    }
+  }
+
+  // 应用时间范围过滤
+  const timeFilteredData = {}
   Object.entries(filteredData).forEach(([deviceName, data]) => {
+    if (data) {
+      const filteredList = data.filter(item => {
+        if (!filterStartTime && !filterEndTime) return true
+
+        // 从时间戳中提取时间部分（秒数）
+        const itemDate = new Date(item.timestamp)
+        const itemTimeSeconds = itemDate.getHours() * 3600 + itemDate.getMinutes() * 60 + itemDate.getSeconds()
+
+        if (filterStartTime && filterEndTime) {
+          return itemTimeSeconds >= filterStartTime && itemTimeSeconds <= filterEndTime
+        } else if (filterStartTime) {
+          return itemTimeSeconds >= filterStartTime
+        } else if (filterEndTime) {
+          return itemTimeSeconds <= filterEndTime
+        }
+        return true
+      })
+      if (filteredList.length > 0) {
+        timeFilteredData[deviceName] = filteredList
+      }
+    }
+  })
+
+  // 收集所有时间戳并去重
+  Object.entries(timeFilteredData).forEach(([deviceName, data]) => {
     if (data) {
       data.forEach(item => {
         allTimestamps.add(item.timestamp)
       })
     }
   })
-  
+
   // 排序时间戳
   const sortedTimestamps = Array.from(allTimestamps).sort((a, b) => a - b)
   const xAxisData = sortedTimestamps.map(formatTime)
-  
+
   // 为每个设备创建一条曲线
   const colors = ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#909399', '#773C1A']
   let colorIndex = 0
-  
-  Object.entries(filteredData).forEach(([deviceName, data]) => {
+
+  Object.entries(timeFilteredData).forEach(([deviceName, data]) => {
     if (data) {
       const dataMap = {}
       data.forEach(item => {
@@ -458,13 +604,182 @@ const handleSizeChange = (size) => {
   currentPage.value = 1
 }
 
+// 处理时间范围变化
+const handleTimeRangeChange = (value) => {
+  if (activeTab.value === 'chart') {
+    updateChart()
+  }
+}
+
+// 清除时间范围筛选
+const clearTimeRange = () => {
+  startTime.value = ''
+  endTime.value = ''
+  if (activeTab.value === 'chart') {
+    updateChart()
+  }
+}
+
 // 处理页码变化
 const handleCurrentChange = (current) => {
   currentPage.value = current
 }
 
+// 对比分析：设置图表引用
+const setCompareChartRef = (el, index) => {
+  if (el) {
+    compareChartRefs.value[index] = el
+  }
+}
+
+// 对比分析：移除设备
+const removeCompareDevice = (device) => {
+  const index = compareDevices.value.indexOf(device)
+  if (index > -1) {
+    compareDevices.value.splice(index, 1)
+    updateCompareCharts()
+  }
+}
+
+// 对比分析：更新所有对比图表
+const updateCompareCharts = () => {
+  // 清理旧图表
+  compareCharts.value.forEach(chart => {
+    if (chart) {
+      chart.dispose()
+    }
+  })
+  compareCharts.value = []
+
+  // 等待DOM更新后创建图表
+  setTimeout(() => {
+    // 为每个选中的设备创建图表
+    compareDevices.value.forEach((device, index) => {
+      const ref = compareChartRefs.value[index]
+      if (ref) {
+        const deviceData = rawData.value[device]
+
+        if (deviceData && deviceData.length > 0) {
+          // 准备数据
+          const timestamps = deviceData.map(item => item.timestamp).sort((a, b) => a - b)
+          const values = deviceData.map(item => item.value)
+
+          // 创建图表
+          const chart = echarts.init(ref)
+          const option = {
+            title: {
+              text: '',
+              left: 'center'
+            },
+            tooltip: {
+              trigger: 'axis',
+              backgroundColor: 'rgba(50, 50, 50, 0.8)',
+              borderColor: '#333',
+              textStyle: {
+                color: '#fff'
+              }
+            },
+            grid: {
+              left: '10%',
+              right: '10%',
+              bottom: '10%',
+              top: '10%',
+              containLabel: true
+            },
+            xAxis: {
+              type: 'category',
+              data: timestamps.map(t => formatTime(t)),
+              boundaryGap: false,
+              axisLine: {
+                lineStyle: {
+                  color: '#ccc'
+                }
+              },
+              axisLabel: {
+                color: '#666',
+                rotate: 45
+              }
+            },
+            yAxis: {
+              type: 'value',
+              axisLine: {
+                lineStyle: {
+                  color: '#ccc'
+                }
+              },
+              axisLabel: {
+                color: '#666'
+              },
+              splitLine: {
+                lineStyle: {
+                  type: 'dashed',
+                  color: '#eee'
+                }
+              }
+            },
+            series: [{
+              name: device,
+              type: 'line',
+              data: values,
+              smooth: 0.4,
+              symbol: 'circle',
+              symbolSize: 4,
+              showSymbol: false,
+              lineStyle: {
+                width: 2.5,
+                shadowColor: 'rgba(0, 0, 0, 0.1)',
+                shadowBlur: 10
+              },
+              areaStyle: {
+                opacity: 0.15,
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  { offset: 0, color: 'rgba(64, 158, 255, 0.3)' },
+                  { offset: 1, color: 'rgba(64, 158, 255, 0.05)' }
+                ])
+              },
+              color: '#409EFF'
+            }],
+            animation: true,
+            animationDuration: 1000,
+            animationEasing: 'cubicOut'
+          }
+
+          chart.setOption(option)
+
+          // 监听窗口大小变化
+          window.addEventListener('resize', () => {
+            chart.resize()
+          })
+
+          compareCharts.value.push(chart)
+        }
+      }
+    })
+  }, 100)
+}
+// 监听activeTab变化，切换到对比分析时更新图表
+watch(activeTab, (newTab) => {
+  if (newTab === 'compare') {
+    // 延迟执行，确保DOM已渲染
+    setTimeout(() => {
+      updateCompareCharts()
+    }, 100)
+  } else if (newTab === 'chart') {
+    // 当切换到图表视图时，延迟执行更新，确保DOM已经渲染
+    setTimeout(() => {
+      // 强制重新初始化图表
+      chart = null
+      updateChart()
+    }, 100)
+  }
+})
+
 // 监听设备选择变化
 watch(selectedDevice, () => {
+  // 切换设备时清除时间范围，显示全部数据
+  startTime.value = ''
+  endTime.value = ''
+  
   if (activeTab.value === 'chart') {
     updateChart()
   }
@@ -589,6 +904,30 @@ onMounted(() => {
   padding: 20px 0;
 }
 
+.time-range-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: #f5f7fa;
+  border-radius: 6px;
+  border: 1px solid #ebeef5;
+}
+
+.time-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #606266;
+  white-space: nowrap;
+}
+
+.time-separator {
+  font-size: 14px;
+  color: #909399;
+  margin: 0 8px;
+}
+
 .table-container {
   width: 100%;
   padding: 20px 0;
@@ -667,6 +1006,59 @@ onMounted(() => {
 :deep(.el-tree-node__content) {
   height: 32px;
   line-height: 32px;
+}
+
+.compare-container {
+  width: 100%;
+  min-height: 500px;
+}
+
+.compare-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 500px;
+}
+
+.compare-charts {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.compare-chart-item {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #ebeef5;
+  transition: all 0.3s ease;
+}
+
+.compare-chart-item:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.compare-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.compare-chart-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.compare-chart {
+  width: 100%;
+  height: 300px;
+  min-height: 300px;
 }
 
 :deep(.el-tree-node.is-current > .el-tree-node__content) {
