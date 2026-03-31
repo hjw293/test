@@ -321,9 +321,14 @@ const updateChart = () => {
         name: deviceName,
         type: 'line',
         data: seriesData,
-        smooth: true,
+        smooth: 0.4,
+        symbol: 'circle',
+        symbolSize: 4,
+        showSymbol: false,
         lineStyle: {
-          width: 2
+          width: 2.5,
+          shadowColor: 'rgba(0, 0, 0, 0.1)',
+          shadowBlur: 10
         },
         itemStyle: {
           borderRadius: [50, 50],
@@ -331,7 +336,11 @@ const updateChart = () => {
           borderColor: '#fff'
         },
         areaStyle: {
-          opacity: 0.1
+          opacity: 0.15,
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(255, 255, 255, 0.3)' },
+            { offset: 1, color: 'rgba(255, 255, 255, 0.05)' }
+          ])
         },
         color: colors[colorIndex % colors.length]
       })
@@ -395,7 +404,17 @@ const updateChart = () => {
         }
       }
     },
-    series: series
+    series: series,
+    animation: true,
+    animationDuration: 1000,
+    animationEasing: 'cubicOut',
+    animationEasingUpdate: 'quadraticOut',
+    // 数据采样策略，当数据点过多时自动采样
+    large: true,
+    largeThreshold: 2000,
+    // 启用渐进式渲染
+    progressive: 200,
+    progressiveThreshold: 1000
   }
   
   chart.setOption(option, true)

@@ -199,21 +199,35 @@ public class SensorDataServiceImpl extends ServiceImpl<SensorDataMapper, SensorD
         logger.info("开始刷新缓存...");
         try {
             // 清除旧缓存
+            long clearStartTime = System.currentTimeMillis();
             clearCache();
+            long clearDuration = System.currentTimeMillis() - clearStartTime;
+            logger.info("清除缓存耗时: {}ms", clearDuration);
 
             // 重新加载数据到缓存
             long startTime = System.currentTimeMillis();
 
             // 查询所有数据
+            long queryStartTime = System.currentTimeMillis();
             List<SensorData> allData = this.list();
-            Map<String, List<SensorData>> result = allData.stream()
-                    .collect(Collectors.groupingBy(SensorData::getDevice));
+            long queryDuration = System.currentTimeMillis() - queryStartTime;
+            logger.info("数据库查询耗时: {}ms, 数据量: {} 条", queryDuration, allData.size());
+
+            // 使用并行流进行分组（加速处理）
+            long groupStartTime = System.currentTimeMillis();
+            Map<String, List<SensorData>> result = allData.parallelStream()
+                    .collect(Collectors.groupingByConcurrent(SensorData::getDevice));
+            long groupDuration = System.currentTimeMillis() - groupStartTime;
+            logger.info("数据分组耗时: {}ms, 设备数: {}", groupDuration, result.size());
 
             // 存入 Redis
+            long cacheStartTime = System.currentTimeMillis();
             redisTemplate.opsForValue().set(CACHE_KEY, result, CACHE_EXPIRE, TimeUnit.MINUTES);
+            long cacheDuration = System.currentTimeMillis() - cacheStartTime;
+            logger.info("Redis写入耗时: {}ms", cacheDuration);
 
-            long duration = System.currentTimeMillis() - startTime;
-            logger.info("缓存刷新完成！耗时: {}ms, 数据量: {} 条", duration, allData.size());
+            long totalDuration = System.currentTimeMillis() - startTime;
+            logger.info("缓存刷新完成！总耗时: {}ms", totalDuration);
         } catch (Exception e) {
             logger.error("缓存刷新失败: ", e);
             throw new RuntimeException("缓存刷新失败: " + e.getMessage(), e);
