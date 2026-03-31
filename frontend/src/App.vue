@@ -114,7 +114,7 @@ const chartRef = ref(null)
 const loading = ref(false)
 const errorMessage = ref('')
 const rawData = ref({})
-const selectedDevice = ref('all')
+const selectedDevice = ref(null)
 const activeTab = ref('chart')
 const currentPage = ref(1)
 const pageSize = ref(10)
@@ -241,6 +241,15 @@ const fetchData = async () => {
 
     if (response.data.code === 200) {
       rawData.value = response.data.data || {}
+
+      // 首次加载时，自动选择第一个设备
+      if (selectedDevice.value === null && rawData.value) {
+        const devices = Object.keys(rawData.value).sort()
+        if (devices.length > 0) {
+          selectedDevice.value = devices[0]
+        }
+      }
+
       updateChart()
     } else {
       errorMessage.value = response.data.message || '获取数据失败'
@@ -278,8 +287,8 @@ const updateChart = () => {
   const series = []
   
   // 过滤设备数据
-  const filteredData = selectedDevice.value === 'all' 
-    ? rawData.value 
+  const filteredData = selectedDevice.value === null
+    ? rawData.value
     : { [selectedDevice.value]: rawData.value[selectedDevice.value] }
   
   // 收集所有时间戳并去重
@@ -395,8 +404,8 @@ const updateChart = () => {
 // 表格数据
 const tableData = computed(() => {
   const data = []
-  const filteredData = selectedDevice.value === 'all' 
-    ? rawData.value 
+  const filteredData = selectedDevice.value === null
+    ? rawData.value
     : { [selectedDevice.value]: rawData.value[selectedDevice.value] }
   
   Object.entries(filteredData).forEach(([deviceName, deviceData]) => {
