@@ -16,8 +16,12 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -37,6 +41,67 @@ public class SensorDataServiceImpl extends ServiceImpl<SensorDataMapper, SensorD
     private static final long CACHE_EXPIRE = 5; // 缓存过期时间（分钟）
 
     /**
+     * 聚合数据：对每个设备的相同时间戳的数据进行合并，计算平均值
+     */
+    private Map<String, List<SensorData>> aggregateData(List<SensorData> allData) {
+        Map<String, List<SensorData>> result = new HashMap<>();
+
+        // 按设备分组
+        Map<String, List<SensorData>> groupedByDevice = allData.stream()
+                .collect(Collectors.groupingBy(SensorData::getDevice));
+
+        // 对每个设备的数据进行聚合
+        groupedByDevice.forEach((device, deviceData) -> {
+            // 按日期+时间分组（同一设备、同一日期、同一时间点合并）
+            Map<String, List<SensorData>> groupedByDateTime = new HashMap<>();
+            
+            deviceData.forEach(item -> {
+                if (item.getTimestamp() != null && item.getDate() != null) {
+                    java.util.Date date = new java.util.Date(item.getTimestamp());
+                    int hours = date.getHours();
+                    int minutes = date.getMinutes();
+                    int seconds = date.getSeconds();
+                    
+                    // 创建键：日期_时间 (例如: "01_08:00:00")
+                    String dateTimeKey = item.getDate() + "_" + 
+                                      String.format("%02d:%02d:%02d", hours, minutes, seconds);
+                    
+                    if (!groupedByDateTime.containsKey(dateTimeKey)) {
+                        groupedByDateTime.put(dateTimeKey, new ArrayList<>());
+                    }
+                    groupedByDateTime.get(dateTimeKey).add(item);
+                }
+            });
+
+            // 计算每个日期+时间的平均值
+            List<SensorData> aggregatedData = new ArrayList<>();
+            groupedByDateTime.forEach((dateTimeKey, items) -> {
+                double avgValue = items.stream()
+                        .mapToDouble(SensorData::getValue)
+                        .average()
+                        .orElse(0.0);
+
+                // 创建聚合后的数据对象
+                SensorData aggregated = new SensorData();
+                aggregated.setDevice(device);
+                // 使用第一条数据的时间戳
+                aggregated.setTimestamp(items.get(0).getTimestamp());
+                aggregated.setValue(avgValue);
+                aggregated.setMonth(items.get(0).getMonth());
+                aggregated.setDate(items.get(0).getDate());
+
+                aggregatedData.add(aggregated);
+            });
+
+            // 按时间戳排序
+            aggregatedData.sort(Comparator.comparing(SensorData::getTimestamp));
+            result.put(device, aggregatedData);
+        });
+
+        return result;
+    }
+
+    /**
      * 应用启动后，进行缓存预热
      * 预先将数据加载到 Redis，提升首次请求速度
      */
@@ -48,8 +113,9 @@ public class SensorDataServiceImpl extends ServiceImpl<SensorDataMapper, SensorD
 
             // 查询所有数据
             List<SensorData> allData = this.list();
-            Map<String, List<SensorData>> result = allData.stream()
-                    .collect(Collectors.groupingBy(SensorData::getDevice));
+            
+            // 聚合数据：合并相同时间戳的数据，计算平均值
+            Map<String, List<SensorData>> result = aggregateData(allData);
 
             // 存入 Redis
             redisTemplate.opsForValue().set(CACHE_KEY, result, CACHE_EXPIRE, TimeUnit.MINUTES);
@@ -101,8 +167,9 @@ public class SensorDataServiceImpl extends ServiceImpl<SensorDataMapper, SensorD
 
         // 缓存未命中或 Redis 连接失败，从数据库查询
         List<SensorData> allData = this.list();
-        Map<String, List<SensorData>> result = allData.stream()
-                .collect(Collectors.groupingBy(SensorData::getDevice));
+        
+        // 聚合数据：合并相同时间戳的数据，计算平均值
+        Map<String, List<SensorData>> result = aggregateData(allData);
 
         // 尝试缓存结果
         try {
@@ -213,12 +280,11 @@ public class SensorDataServiceImpl extends ServiceImpl<SensorDataMapper, SensorD
             long queryDuration = System.currentTimeMillis() - queryStartTime;
             logger.info("数据库查询耗时: {}ms, 数据量: {} 条", queryDuration, allData.size());
 
-            // 使用并行流进行分组（加速处理）
+            // 聚合数据：合并相同时间戳的数据，计算平均值
             long groupStartTime = System.currentTimeMillis();
-            Map<String, List<SensorData>> result = allData.parallelStream()
-                    .collect(Collectors.groupingByConcurrent(SensorData::getDevice));
+            Map<String, List<SensorData>> result = aggregateData(allData);
             long groupDuration = System.currentTimeMillis() - groupStartTime;
-            logger.info("数据分组耗时: {}ms, 设备数: {}", groupDuration, result.size());
+            logger.info("数据聚合耗时: {}ms, 设备数: {}", groupDuration, result.size());
 
             // 存入 Redis
             long cacheStartTime = System.currentTimeMillis();
