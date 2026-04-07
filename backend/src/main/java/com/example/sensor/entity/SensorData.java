@@ -1,6 +1,7 @@
 package com.example.sensor.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
@@ -53,6 +54,12 @@ public class SensorData implements Serializable {
      * 传感器数值
      */
     private Double value;
+
+    /**
+     * 实时时间（格式：2026-03-17 17:09:18）
+     */
+    @TableField("real_time")
+    private String realTime;
 
     /**
      * 创建时间

@@ -41,7 +41,8 @@ public class SensorDataServiceImpl extends ServiceImpl<SensorDataMapper, SensorD
     private static final long CACHE_EXPIRE = 5; // 缓存过期时间（分钟）
 
     /**
-     * 聚合数据：对每个设备的相同时间戳的数据进行合并，计算平均值
+     * 按设备分组数据，不再聚合，直接返回所有数据
+     * 从 realTime 字段中提取月份和日期
      */
     private Map<String, List<SensorData>> aggregateData(List<SensorData> allData) {
         Map<String, List<SensorData>> result = new HashMap<>();
@@ -50,52 +51,28 @@ public class SensorDataServiceImpl extends ServiceImpl<SensorDataMapper, SensorD
         Map<String, List<SensorData>> groupedByDevice = allData.stream()
                 .collect(Collectors.groupingBy(SensorData::getDevice));
 
-        // 对每个设备的数据进行聚合
+        // 对每个设备的数据按时间戳排序
         groupedByDevice.forEach((device, deviceData) -> {
-            // 按日期+时间分组（同一设备、同一日期、同一时间点合并）
-            Map<String, List<SensorData>> groupedByDateTime = new HashMap<>();
-
+            // 从 realTime 提取月份和日期
             deviceData.forEach(item -> {
-                if (item.getTimestamp() != null && item.getDate() != null && item.getDevice() != null) {
-                    java.util.Date date = new java.util.Date(item.getTimestamp());
-                    int hours = date.getHours();
-                    int minutes = date.getMinutes();
-                    int seconds = date.getSeconds();
-
-                    // 创建键：日期_时间 (例如: "01_08:00:00")
-                    String dateTimeKey = item.getDate() + "_" +
-                                      String.format("%02d:%02d:%02d", hours, minutes, seconds);
-
-                    if (!groupedByDateTime.containsKey(dateTimeKey)) {
-                        groupedByDateTime.put(dateTimeKey, new ArrayList<>());
+                if (item.getRealTime() != null && item.getRealTime().length() >= 10) {
+                    String realTime = item.getRealTime();
+                    item.setMonth(realTime.substring(0, 7));  // 2026-03
+                    item.setDate(realTime.substring(8, 10)); // 17
+                } else {
+                    // 如果 realTime 不存在，从 timestamp 提取
+                    if (item.getTimestamp() != null) {
+                        java.util.Date date = new java.util.Date(item.getTimestamp());
+                        java.text.SimpleDateFormat monthFormat = new java.text.SimpleDateFormat("yyyy-MM");
+                        java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("dd");
+                        item.setMonth(monthFormat.format(date));
+                        item.setDate(dateFormat.format(date));
                     }
-                    groupedByDateTime.get(dateTimeKey).add(item);
                 }
             });
 
-            // 计算每个日期+时间的平均值
-            List<SensorData> aggregatedData = new ArrayList<>();
-            groupedByDateTime.forEach((dateTimeKey, items) -> {
-                double avgValue = items.stream()
-                        .mapToDouble(SensorData::getValue)
-                        .average()
-                        .orElse(0.0);
-
-                // 创建聚合后的数据对象
-                SensorData aggregated = new SensorData();
-                aggregated.setDevice(device);
-                // 使用第一条数据的时间戳
-                aggregated.setTimestamp(items.get(0).getTimestamp());
-                aggregated.setValue(avgValue);
-                aggregated.setMonth(items.get(0).getMonth());
-                aggregated.setDate(items.get(0).getDate());
-
-                aggregatedData.add(aggregated);
-            });
-
-            // 按时间戳排序
-            aggregatedData.sort(Comparator.comparing(SensorData::getTimestamp));
-            result.put(device, aggregatedData);
+            deviceData.sort(Comparator.comparing(SensorData::getTimestamp));
+            result.put(device, deviceData);
         });
 
         return result;

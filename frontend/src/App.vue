@@ -313,15 +313,23 @@ const renderTreeContent = (h, { node, data }) => {
   ])
 }
 
-// 时间戳转换为 HH:mm:ss 格式
-const formatTime = (timestamp) => {
-  const date = new Date(timestamp)
-  return date.toLocaleTimeString('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  })
+// 时间戳转换为 HH:mm:ss 格式，优先从 realTime 提取
+const formatTime = (item) => {
+  // 如果有 realTime 字段，直接提取时间部分
+  if (item && item.realTime && item.realTime.length > 10) {
+    return item.realTime.substring(11) // 提取时间部分 (例如: "17:09:18")
+  }
+  // 否则从 timestamp 转换
+  if (item && item.timestamp) {
+    const date = new Date(item.timestamp)
+    return date.toLocaleTimeString('zh-CN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    })
+  }
+  return ''
 }
 
 // 日期格式化为 YYYY-MM-DD HH:mm:ss 格式
@@ -470,18 +478,36 @@ const updateChart = () => {
     }
   })
 
-  // 收集所有时间戳并去重
+  // 收集所有时间戳并去重，同时创建 timestamp 到 realTime 的映射
+  const timestampToRealTime = new Map()
   Object.entries(timeFilteredData).forEach(([deviceName, data]) => {
     if (data) {
       data.forEach(item => {
         allTimestamps.add(item.timestamp)
+        // 如果该 timestamp 还没有对应的 realTime，则记录
+        if (!timestampToRealTime.has(item.timestamp) && item.realTime) {
+          timestampToRealTime.set(item.timestamp, item.realTime)
+        }
       })
     }
   })
 
   // 排序时间戳
   const sortedTimestamps = Array.from(allTimestamps).sort((a, b) => a - b)
-  const xAxisData = sortedTimestamps.map(formatTime)
+  const xAxisData = sortedTimestamps.map(timestamp => {
+    const realTime = timestampToRealTime.get(timestamp)
+    if (realTime && realTime.length > 10) {
+      return realTime.substring(11) // 提取时间部分
+    }
+    // 否则从 timestamp 转换
+    const date = new Date(timestamp)
+    return date.toLocaleTimeString('zh-CN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    })
+  })
 
   // 为每个设备创建一条曲线
   const colors = ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#909399', '#773C1A']
@@ -602,10 +628,28 @@ const updateChart = () => {
 // 表格数据
 const tableData = computed(() => {
   const data = []
-  const filteredData = selectedDevice.value === null
-    ? rawData.value
-    : { [selectedDevice.value]: rawData.value[selectedDevice.value] }
-  
+
+  // 过滤设备数据（同时考虑设备、月份和日期）
+  const filteredData = {}
+  if (selectedDevice.value === null) {
+    // 未选择设备，显示所有数据
+    Object.assign(filteredData, rawData.value)
+  } else {
+    // 选择设备，过滤出该设备的数据
+    const deviceData = rawData.value[selectedDevice.value]
+    if (deviceData) {
+      // 进一步按月份和日期过滤
+      let filteredList = deviceData
+      if (selectedMonth.value) {
+        filteredList = filteredList.filter(item => item.month === selectedMonth.value)
+      }
+      if (selectedDate.value) {
+        filteredList = filteredList.filter(item => item.date === selectedDate.value)
+      }
+      filteredData[selectedDevice.value] = filteredList
+    }
+  }
+
   Object.entries(filteredData).forEach(([deviceName, deviceData]) => {
     if (deviceData) {
       deviceData.forEach(item => {
@@ -613,13 +657,13 @@ const tableData = computed(() => {
           device: item.device,
           month: item.month,
           date: item.date,
-          time: formatTime(item.timestamp),
+          time: formatTime(item),
           value: item.value
         })
       })
     }
   })
-  
+
   // 按时间戳排序
   return data.sort((a, b) => new Date(a.time) - new Date(b.time))
 })
@@ -736,8 +780,10 @@ const updateCompareCharts = () => {
 
           if (deviceData.length > 0) {
             // 准备数据
-            const timestamps = deviceData.map(item => item.timestamp).sort((a, b) => a - b)
-            const values = deviceData.map(item => item.value)
+            const sortedData = deviceData.sort((a, b) => a.timestamp - b.timestamp)
+            const timestamps = sortedData.map(item => item.timestamp)
+            const values = sortedData.map(item => item.value)
+            const timeLabels = sortedData.map(item => formatTime(item))
 
             // 创建图表
             const chart = echarts.init(ref)
@@ -763,7 +809,7 @@ const updateCompareCharts = () => {
               },
               xAxis: {
                 type: 'category',
-                data: timestamps.map(t => formatTime(t)),
+                data: timeLabels,
                 boundaryGap: false,
                 axisLine: {
                   lineStyle: {
