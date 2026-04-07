@@ -459,9 +459,18 @@ const updateChart = () => {
       const filteredList = data.filter(item => {
         if (!filterStartTime && !filterEndTime) return true
 
-        // 从时间戳中提取时间部分（秒数）
-        const itemDate = new Date(item.timestamp)
-        const itemTimeSeconds = itemDate.getHours() * 3600 + itemDate.getMinutes() * 60 + itemDate.getSeconds()
+        // 优先从 realTime 提取时间部分，否则从 timestamp 提取
+        let itemTimeSeconds = null
+        if (item.realTime && item.realTime.length > 10) {
+          const timePart = item.realTime.substring(11) // "17:09:18"
+          const [hours, minutes, seconds] = timePart.split(':').map(Number)
+          itemTimeSeconds = hours * 3600 + minutes * 60 + (seconds || 0)
+        } else if (item.timestamp) {
+          const itemDate = new Date(item.timestamp)
+          itemTimeSeconds = itemDate.getHours() * 3600 + itemDate.getMinutes() * 60 + itemDate.getSeconds()
+        }
+
+        if (itemTimeSeconds === null) return true
 
         if (filterStartTime && filterEndTime) {
           return itemTimeSeconds >= filterStartTime && itemTimeSeconds <= filterEndTime
