@@ -36,13 +36,15 @@ public class SensorData implements Serializable {
     private String device;
 
     /**
-     * 月份
+     * 月份（计算字段，不在数据库中）
      */
+    @TableField(exist = false)
     private String month;
 
     /**
-     * 日期
+     * 日期（计算字段，不在数据库中）
      */
+    @TableField(exist = false)
     private String date;
 
     /**
@@ -64,5 +66,6 @@ public class SensorData implements Serializable {
     /**
      * 创建时间
      */
+    @TableField("created_at")
     private LocalDateTime createdAt;
 }

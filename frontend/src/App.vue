@@ -118,26 +118,33 @@
                     </template>
                   </el-empty>
                 </div>
-                <div v-else class="compare-charts">
-                  <div
-                    v-for="(deviceInfo, index) in compareDevices"
-                    :key="`${deviceInfo.device}-${deviceInfo.month}-${deviceInfo.date}`"
-                    class="compare-chart-item"
-                  >
-                    <div class="compare-chart-header">
-                      <div class="compare-chart-info">
-                        <span class="compare-chart-title">{{ deviceInfo.device }}</span>
-                        <span class="compare-chart-dates">{{ getDeviceDateInfo(deviceInfo) }}</span>
+                <div v-else class="compare-content">
+                  <!-- 设备列表 -->
+                  <div class="compare-devices-header">
+                    <div class="compare-devices-title">已选择设备</div>
+                    <div class="compare-devices-list">
+                      <div
+                        v-for="(deviceInfo, index) in compareDevices"
+                        :key="`${deviceInfo.device}-${deviceInfo.month}-${deviceInfo.date}`"
+                        class="compare-device-tag"
+                      >
+                        <span class="device-tag-info">
+                          <span class="device-tag-name">{{ deviceInfo.device }}</span>
+                          <span class="device-tag-date">{{ getDeviceDateInfo(deviceInfo) }}</span>
+                        </span>
+                        <el-button
+                          type="danger"
+                          size="small"
+                          :icon="Close"
+                          circle
+                          @click="removeCompareDevice(deviceInfo)"
+                        />
                       </div>
-                      <el-button
-                        type="danger"
-                        size="small"
-                        :icon="Close"
-                        circle
-                        @click="removeCompareDevice(deviceInfo)"
-                      />
                     </div>
-                    <div :ref="el => setCompareChartRef(el, index)" class="compare-chart"></div>
+                  </div>
+                  <!-- 统一图表容器 -->
+                  <div class="compare-chart-wrapper">
+                    <div ref="compareChartRef" class="compare-chart"></div>
                   </div>
                 </div>
               </div>
@@ -192,7 +199,7 @@ let chart = null
 // 对比分析相关状态
 const compareDevices = ref([])
 const compareCharts = ref([])
-const compareChartRefs = ref([])
+const compareChartRef = ref(null)
 
 // 时间范围选择
 const startTime = ref('')
@@ -535,7 +542,7 @@ const updateChart = () => {
         name: deviceName,
         type: 'line',
         data: seriesData,
-        smooth: 0.4,
+        smooth: 0.8,
         symbol: 'circle',
         symbolSize: 4,
         showSymbol: false,
@@ -711,13 +718,6 @@ const handleCurrentChange = (current) => {
   currentPage.value = current
 }
 
-// 对比分析：设置图表引用
-const setCompareChartRef = (el, index) => {
-  if (el) {
-    compareChartRefs.value[index] = el
-  }
-}
-
 // 对比分析：获取设备的日期信息
 const getDeviceDateInfo = (deviceInfo) => {
   if (!rawData.value || !rawData.value[deviceInfo.device]) {
@@ -763,129 +763,172 @@ const removeCompareDevice = (deviceInfo) => {
 // 对比分析：更新所有对比图表
 const updateCompareCharts = () => {
   // 清理旧图表
-  compareCharts.value.forEach(chart => {
-    if (chart) {
-      chart.dispose()
-    }
-  })
-  compareCharts.value = []
+  if (compareCharts.value.length > 0) {
+    compareCharts.value.forEach(chart => {
+      if (chart) {
+        chart.dispose()
+      }
+    })
+    compareCharts.value = []
+  }
 
   // 等待DOM更新后创建图表
   setTimeout(() => {
-    // 为每个选中的设备创建图表
-    compareDevices.value.forEach((deviceInfo, index) => {
-      const ref = compareChartRefs.value[index]
-      if (ref) {
-        const allDeviceData = rawData.value[deviceInfo.device]
+    const ref = compareChartRef.value
+    if (!ref || compareDevices.value.length === 0) {
+      return
+    }
 
-        if (allDeviceData && allDeviceData.length > 0) {
-          // 根据月份和日期过滤数据
-          let deviceData = allDeviceData
-          if (deviceInfo.month && deviceInfo.date) {
-            deviceData = allDeviceData.filter(item => 
-              item.month === deviceInfo.month && item.date === deviceInfo.date
-            )
-          }
+    // 为每个设备准备数据
+    const allDeviceSeriesData = []
+    const colors = ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#909399', '#773C1A', '#F7BA2A', '#8e44ad']
 
-          if (deviceData.length > 0) {
-            // 准备数据
-            const sortedData = deviceData.sort((a, b) => a.timestamp - b.timestamp)
-            const timestamps = sortedData.map(item => item.timestamp)
-            const values = sortedData.map(item => item.value)
-            const timeLabels = sortedData.map(item => formatTime(item))
+    compareDevices.value.forEach((deviceInfo, deviceIndex) => {
+      const allDeviceData = rawData.value[deviceInfo.device]
 
-            // 创建图表
-            const chart = echarts.init(ref)
-            const option = {
-              title: {
-                text: '',
-                left: 'center'
-              },
-              tooltip: {
-                trigger: 'axis',
-                backgroundColor: 'rgba(50, 50, 50, 0.8)',
-                borderColor: '#333',
-                textStyle: {
-                  color: '#fff'
-                }
-              },
-              grid: {
-                left: '10%',
-                right: '10%',
-                bottom: '10%',
-                top: '10%',
-                containLabel: true
-              },
-              xAxis: {
-                type: 'category',
-                data: timeLabels,
-                boundaryGap: false,
-                axisLine: {
-                  lineStyle: {
-                    color: '#ccc'
-                  }
-                },
-                axisLabel: {
-                  color: '#666',
-                  rotate: 45
-                }
-              },
-              yAxis: {
-                type: 'value',
-                axisLine: {
-                  lineStyle: {
-                    color: '#ccc'
-                  }
-                },
-                axisLabel: {
-                  color: '#666'
-                },
-                splitLine: {
-                  lineStyle: {
-                    type: 'dashed',
-                    color: '#eee'
-                  }
-                }
-              },
-              series: [{
-                name: deviceInfo.device,
-                type: 'line',
-                data: values,
-                smooth: 0.4,
-                symbol: 'circle',
-                symbolSize: 4,
-                showSymbol: false,
-                lineStyle: {
-                  width: 2.5,
-                  shadowColor: 'rgba(0, 0, 0, 0.1)',
-                  shadowBlur: 10
-                },
-                areaStyle: {
-                  opacity: 0.15,
-                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: 'rgba(64, 158, 255, 0.3)' },
-                    { offset: 1, color: 'rgba(64, 158, 255, 0.05)' }
-                  ])
-                },
-                color: '#409EFF'
-              }],
-              animation: true,
-              animationDuration: 1000,
-              animationEasing: 'cubicOut'
-            }
+      if (allDeviceData && allDeviceData.length > 0) {
+        // 根据月份和日期过滤数据
+        let deviceData = allDeviceData
+        if (deviceInfo.month && deviceInfo.date) {
+          deviceData = allDeviceData.filter(item =>
+            item.month === deviceInfo.month && item.date === deviceInfo.date
+          )
+        }
 
-          chart.setOption(option)
+        if (deviceData.length > 0) {
+          // 准备数据
+          const sortedData = deviceData.sort((a, b) => a.timestamp - b.timestamp)
+          const timeLabels = sortedData.map(item => formatTime(item))
+          const values = sortedData.map(item => item.value)
 
-          // 监听窗口大小变化
-          window.addEventListener('resize', () => {
-            chart.resize()
+          allDeviceSeriesData.push({
+            timeLabels: timeLabels,
+            values: values,
+            deviceInfo: deviceInfo,
+            deviceIndex: deviceIndex
           })
-
-          compareCharts.value.push(chart)
         }
       }
+    })
+
+    if (allDeviceSeriesData.length === 0) {
+      return
     }
-  })
+
+    // 找出最长的数据作为X轴
+    const maxDataSeries = allDeviceSeriesData.reduce((max, current) =>
+      current.timeLabels.length > max.timeLabels.length ? current : max
+    )
+
+    // 创建图表
+    const chart = echarts.init(ref)
+    const series = allDeviceSeriesData.map((data, index) => ({
+      name: `${data.deviceInfo.device} (${data.deviceInfo.month || '全部'}/${data.deviceInfo.date || '全部'})`,
+      type: 'line',
+      data: data.values,
+      smooth: 0.4,
+      symbol: 'circle',
+      symbolSize: 4,
+      showSymbol: false,
+      lineStyle: {
+        width: 2.5,
+        shadowColor: 'rgba(0, 0, 0, 0.1)',
+        shadowBlur: 10
+      },
+      itemStyle: {
+        borderWidth: 2,
+        borderColor: '#fff'
+      },
+      areaStyle: {
+        opacity: 0.1,
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: colors[index % colors.length] },
+          { offset: 1, color: echarts.color.modifyAlpha(colors[index % colors.length], 0.05) }
+        ])
+      },
+      color: colors[index % colors.length]
+    }))
+
+    const option = {
+      title: {
+        text: '设备数据对比',
+        left: 'center',
+        textStyle: {
+          fontSize: 18,
+          fontWeight: 'bold'
+        }
+      },
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: 'rgba(50, 50, 50, 0.8)',
+        borderColor: '#333',
+        textStyle: {
+          color: '#fff'
+        },
+        axisPointer: {
+          type: 'cross',
+          crossStyle: {
+            color: '#999'
+          }
+        }
+      },
+      legend: {
+        data: series.map(s => s.name),
+        top: '10%',
+        type: 'scroll'
+      },
+      grid: {
+        left: '10%',
+        right: '10%',
+        bottom: '10%',
+        top: '20%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'category',
+        data: maxDataSeries.timeLabels,
+        boundaryGap: false,
+        axisLine: {
+          lineStyle: {
+            color: '#ccc'
+          }
+        },
+        axisLabel: {
+          color: '#666',
+          rotate: 45
+        }
+      },
+      yAxis: {
+        type: 'value',
+        axisLine: {
+          lineStyle: {
+            color: '#ccc'
+          }
+        },
+        axisLabel: {
+          color: '#666'
+        },
+        splitLine: {
+          lineStyle: {
+            type: 'dashed',
+            color: '#eee'
+          }
+        }
+      },
+      series: series,
+      animation: true,
+      animationDuration: 1000,
+      animationEasing: 'cubicOut'
+    }
+
+    chart.setOption(option)
+
+    // 监听窗口大小变化
+    window.addEventListener('resize', () => {
+      chart.resize()
+    })
+
+    compareCharts.value.push(chart)
   }, 100)
 }
 // 监听activeTab变化，切换到对比分析时更新图表
@@ -1158,50 +1201,80 @@ onMounted(() => {
   width: 100%;
 }
 
-.compare-chart-item {
+.compare-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.compare-devices-header {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #ebeef5;
+}
+
+.compare-devices-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #606266;
+  margin-bottom: 12px;
+}
+
+.compare-devices-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.compare-device-tag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #f5f7fa;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.compare-device-tag:hover {
+  background: #ecf5ff;
+  border-color: #409eff;
+}
+
+.device-tag-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.device-tag-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #303133;
+}
+
+.device-tag-date {
+  font-size: 11px;
+  color: #909399;
+}
+
+.compare-chart-wrapper {
   background: white;
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   border: 1px solid #ebeef5;
-  transition: all 0.3s ease;
-}
-
-.compare-chart-item:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-}
-
-.compare-chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
-}
-
-.compare-chart-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.compare-chart-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.compare-chart-dates {
-  font-size: 13px;
-  color: #909399;
-  font-weight: 400;
+  min-height: 500px;
 }
 
 .compare-chart {
   width: 100%;
-  height: 300px;
-  min-height: 300px;
+  height: 500px;
+  min-height: 500px;
 }
 
 :deep(.el-tree-node.is-current > .el-tree-node__content) {

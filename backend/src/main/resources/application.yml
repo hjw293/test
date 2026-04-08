@@ -1,10 +1,17 @@
 spring:
   # 数据库配置
   datasource:
-    url: jdbc:mysql://localhost:3306/testdb?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://localhost:3306/testdb?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&useServerPrepStmts=true&cachePrepStmts=true&prepStmtCacheSize=250&prepStmtCacheSqlLimit=2048&rewriteBatchedStatements=true
     username: root
     password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-test-query: SELECT 1
 
   # Redis配置
   data:
@@ -13,7 +20,7 @@ spring:
       port: 6379
       #password: 123456
       database: 0
-      timeout: 10000
+      timeout: 1000
       pool:
         max-active: 8
         max-wait: -1
@@ -24,8 +31,6 @@ spring:
 mybatis-plus:
   mapper-locations: classpath:mapper/**/*.xml
   type-aliases-package: com.example.sensor.entity
-  configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
 # 应用配置
 server:

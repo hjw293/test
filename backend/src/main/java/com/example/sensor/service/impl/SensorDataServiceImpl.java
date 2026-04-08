@@ -45,14 +45,22 @@ public class SensorDataServiceImpl extends ServiceImpl<SensorDataMapper, SensorD
      * 从 realTime 字段中提取月份和日期
      */
     private Map<String, List<SensorData>> aggregateData(List<SensorData> allData) {
+        long startTime = System.currentTimeMillis();
         Map<String, List<SensorData>> result = new HashMap<>();
 
+        logger.info("开始聚合数据，总数据量: {}", allData.size());
+
         // 按设备分组
+        long groupStartTime = System.currentTimeMillis();
         Map<String, List<SensorData>> groupedByDevice = allData.stream()
                 .collect(Collectors.groupingBy(SensorData::getDevice));
+        long groupDuration = System.currentTimeMillis() - groupStartTime;
+        logger.info("按设备分组耗时: {}ms, 设备数: {}", groupDuration, groupedByDevice.size());
 
         // 对每个设备的数据按时间戳排序
+        long processStartTime = System.currentTimeMillis();
         groupedByDevice.forEach((device, deviceData) -> {
+            logger.debug("处理设备: {}, 数据量: {}", device, deviceData.size());
             // 从 realTime 提取月份和日期
             deviceData.forEach(item -> {
                 if (item.getRealTime() != null && item.getRealTime().length() >= 10) {
@@ -74,7 +82,11 @@ public class SensorDataServiceImpl extends ServiceImpl<SensorDataMapper, SensorD
             deviceData.sort(Comparator.comparing(SensorData::getTimestamp));
             result.put(device, deviceData);
         });
+        long processDuration = System.currentTimeMillis() - processStartTime;
+        logger.info("数据处理耗时: {}ms", processDuration);
 
+        long duration = System.currentTimeMillis() - startTime;
+        logger.info("聚合完成，总耗时: {}ms", duration);
         return result;
     }
 
@@ -143,26 +155,46 @@ public class SensorDataServiceImpl extends ServiceImpl<SensorDataMapper, SensorD
         }
 
         // 缓存未命中或 Redis 连接失败，从数据库查询
+        Runtime runtime = Runtime.getRuntime();
+        long memoryBefore = runtime.totalMemory() - runtime.freeMemory();
+        logger.info("查询前内存使用: {} MB", memoryBefore / 1024 / 1024);
+
+        long dbStartTime = System.currentTimeMillis();
+        // 查询所有数据
         List<SensorData> allData = this.list();
+        long dbDuration = System.currentTimeMillis() - dbStartTime;
+
+        long memoryAfter = runtime.totalMemory() - runtime.freeMemory();
+        long memoryUsed = memoryAfter - memoryBefore;
+        logger.info("数据库查询耗时: {}ms, 数据量: {} 条, 内存使用: {} MB", dbDuration, allData.size(), memoryUsed / 1024 / 1024);
 
         // 过滤掉设备名称为null的数据
+        long filterStartTime = System.currentTimeMillis();
         allData = allData.stream()
                 .filter(item -> item.getDevice() != null)
                 .collect(Collectors.toList());
-        
+        long filterDuration = System.currentTimeMillis() - filterStartTime;
+        logger.info("过滤数据耗时: {}ms", filterDuration);
+
         // 聚合数据：合并相同时间戳的数据，计算平均值
+        long aggregateStartTime = System.currentTimeMillis();
         Map<String, List<SensorData>> result = aggregateData(allData);
+        long aggregateDuration = System.currentTimeMillis() - aggregateStartTime;
+        logger.info("数据聚合耗时: {}ms", aggregateDuration);
 
         // 尝试缓存结果
+        long cacheStartTime = System.currentTimeMillis();
         try {
             redisTemplate.opsForValue().set(CACHE_KEY, result, CACHE_EXPIRE, TimeUnit.MINUTES);
             logger.debug("数据已缓存到 Redis");
         } catch (Exception e) {
             logger.warn("Redis 缓存失败: {}", e.getMessage());
         }
+        long cacheDuration = System.currentTimeMillis() - cacheStartTime;
+        logger.info("Redis缓存耗时: {}ms", cacheDuration);
 
         long duration = System.currentTimeMillis() - startTime;
-        logger.debug("数据库查询完成！响应时间: {}ms", duration);
+        logger.info("总响应时间: {}ms", duration);
         return result;
     }
 
