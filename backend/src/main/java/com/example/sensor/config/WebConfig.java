@@ -1,18 +1,21 @@
 package com.example.sensor.config;
 
+import com.example.sensor.interceptor.AuthInterceptor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * 全局 CORS 跨域配置
+ * Web配置
  */
 @Configuration
-public class CorsConfig implements WebMvcConfigurer {
+public class WebConfig implements WebMvcConfigurer {
 
-    /**
-     * 配置跨域请求
-     */
+    @Autowired
+    private AuthInterceptor authInterceptor;
+
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
@@ -21,5 +24,12 @@ public class CorsConfig implements WebMvcConfigurer {
                 .allowedHeaders("*")
                 .allowCredentials(true)
                 .maxAge(3600);
+    }
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(authInterceptor)
+                .addPathPatterns("/api/**")
+                .excludePathPatterns("/api/auth/login", "/api/auth/validate");
     }
 }
