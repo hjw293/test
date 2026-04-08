@@ -3,7 +3,7 @@
     <el-header class="header">
       <h1>传感器数据实时展示系统</h1>
     </el-header>
-    
+
     <el-main class="main-content">
       <el-row :gutter="20">
         <el-col :xs="24" :sm="24" :md="6" :lg="5">
@@ -25,22 +25,22 @@
             <template #header>
               <div class="card-header">
                 <div class="title-tabs">
-                  <span 
-                    :class="{ active: activeTab === 'chart' }" 
+                  <span
+                    :class="{ active: activeTab === 'chart' }"
                     @click="activeTab = 'chart'"
                     class="tab-item"
                   >
                     传感器数据曲线图
                   </span>
-                  <span 
-                    :class="{ active: activeTab === 'compare' }" 
+                  <span
+                    :class="{ active: activeTab === 'compare' }"
                     @click="activeTab = 'compare'"
                     class="tab-item"
                   >
                     对比分析
                   </span>
-                  <span 
-                    :class="{ active: activeTab === 'table' }" 
+                  <span
+                    :class="{ active: activeTab === 'table' }"
                     @click="activeTab = 'table'"
                     class="tab-item"
                   >
@@ -54,7 +54,7 @@
                 </div>
               </div>
             </template>
-            
+
             <div v-loading="loading">
               <!-- 图表视图 -->
               <div v-if="activeTab === 'chart'" class="chart-container">
@@ -86,15 +86,15 @@
                 </div>
                 <div ref="chartRef" style="width: 100%; height: 500px;"></div>
               </div>
-              
+
               <!-- 表格视图 -->
               <div v-else-if="activeTab === 'table'" class="table-container">
                 <el-table :data="paginatedTableData" style="width: 100%">
-                  <el-table-column prop="device" label="设备" width="120" />
-                  <el-table-column prop="month" label="月份" width="100" />
-                  <el-table-column prop="date" label="日期" width="100" />
-                  <el-table-column prop="time" label="时间" width="120" />
-                  <el-table-column prop="value" label="数值" width="100" />
+                  <el-table-column prop="device" label="设备" min-width="150" />
+                  <el-table-column prop="month" label="月份" min-width="120" />
+                  <el-table-column prop="date" label="日期" min-width="100" />
+                  <el-table-column prop="time" label="时间" min-width="150" />
+                  <el-table-column prop="value" label="数值" min-width="120" />
                 </el-table>
                 <div style="margin-top: 20px; text-align: right;">
                   <el-pagination
@@ -148,17 +148,17 @@
                   </div>
                 </div>
               </div>
-              
-              <el-alert 
-                v-if="errorMessage" 
-                :title="errorMessage" 
-                type="error" 
+
+              <el-alert
+                v-if="errorMessage"
+                :title="errorMessage"
+                type="error"
                 :closable="true"
                 style="margin-top: 16px;"
               />
             </div>
           </el-card>
-          
+
           <!-- 数据统计卡片 -->
           <el-row :gutter="20" style="margin-top: 20px;">
             <el-col :xs="24" :sm="12" :md="6" v-for="(stat, index) in statistics" :key="index">
@@ -213,16 +213,16 @@ const treeData = computed(() => {
     label: 'localStorage',
     children: []
   }
-  
+
   // 收集所有数据点
   const allData = Object.values(rawData.value).flat()
-  
+
   // 按月份分组
   const months = new Set()
   allData.forEach(item => {
     if (item.month) months.add(item.month)
   })
-  
+
   // 生成月份节点
   Array.from(months).sort().forEach(month => {
     const monthNode = {
@@ -230,13 +230,13 @@ const treeData = computed(() => {
       label: `月份 ${month}`,
       children: []
     }
-    
+
     // 按日期分组
     const dates = new Set()
     allData.filter(item => item.month === month).forEach(item => {
       if (item.date) dates.add(item.date)
     })
-    
+
     // 生成日期节点
     Array.from(dates).sort().forEach(date => {
       const dateNode = {
@@ -244,13 +244,13 @@ const treeData = computed(() => {
         label: `日期 ${date}`,
         children: []
       }
-      
+
       // 按设备分组
       const devices = new Set()
       allData.filter(item => item.month === month && item.date === date).forEach(item => {
         if (item.device) devices.add(item.device)
       })
-      
+
       // 生成设备节点
       Array.from(devices).sort().forEach(device => {
         dateNode.children.push({
@@ -261,13 +261,13 @@ const treeData = computed(() => {
           date: date
         })
       })
-      
+
       monthNode.children.push(dateNode)
     })
-    
+
     root.children.push(monthNode)
   })
-  
+
   data.push(root)
   return data
 })
@@ -282,10 +282,10 @@ const handleTreeClick = (data) => {
         month: data.month,
         date: data.date
       }
-      
+
       // 检查是否已经选中
       const existingIndex = compareDevices.value.findIndex(d => d.device === deviceInfo.device && d.month === deviceInfo.month && d.date === deviceInfo.date)
-      
+
       if (existingIndex > -1) {
         // 已选中，取消选中
         compareDevices.value.splice(existingIndex, 1)
@@ -535,9 +535,9 @@ const updateChart = () => {
       data.forEach(item => {
         dataMap[item.timestamp] = item.value
       })
-      
+
       const seriesData = sortedTimestamps.map(timestamp => dataMap[timestamp] ?? null)
-      
+
       series.push({
         name: deviceName,
         type: 'line',
@@ -568,7 +568,7 @@ const updateChart = () => {
       colorIndex++
     }
   })
-  
+
   const option = {
     title: {
       text: '',
@@ -637,7 +637,7 @@ const updateChart = () => {
     progressive: 200,
     progressiveThreshold: 1000
   }
-  
+
   chart.setOption(option, true)
 }
 
@@ -953,7 +953,7 @@ watch(selectedDevice, () => {
   // 切换设备时清除时间范围，显示全部数据
   startTime.value = ''
   endTime.value = ''
-  
+
   if (activeTab.value === 'chart') {
     updateChart()
   }
@@ -997,223 +997,175 @@ onMounted(() => {
 <style scoped>
 .container {
   min-height: 100vh;
-  background-color: #f5f7fa;
-  display: flex;
-  flex-direction: column;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
 }
 
 .header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 20px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  background: transparent;
+  border-radius: 16px;
+  margin-bottom: 20px;
+  padding: 20px 40px;
+  border: none;
+  display: flex;
+  align-items: center;
 }
 
 .header h1 {
-  margin: 0;
+  color: #fff;
   font-size: 28px;
   font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  margin: 0;
+  text-align: left;
 }
 
 .main-content {
-  flex: 1;
-  padding: 30px;
+  padding: 0;
 }
 
 .tree-card {
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  border-radius: 8px;
-  border: 1px solid #ebeef5;
-  height: 800px;
-  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  border: none;
+  height: calc(100vh - 140px);
+  overflow: hidden;
+}
+
+.tree-card :deep(.el-card__header) {
+  background: linear-gradient(135deg, #5568d3 0%, #3e4a8d 100%);
+  color: #fff;
+  font-weight: 600;
+  padding: 15px 20px;
+  border-radius: 16px 16px 0 0;
 }
 
 .chart-card {
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  border-radius: 8px;
-  border: 1px solid #ebeef5;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  border: none;
+}
+
+.chart-card :deep(.el-card__header) {
+  background: rgba(255, 255, 255, 0.98);
+  padding: 20px;
+  border-bottom: 2px solid #f0f0f0;
+  border-radius: 16px 16px 0 0;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 100%;
+  gap: 20px;
 }
 
 .title-tabs {
   display: flex;
-  align-items: center;
-  gap: 20px;
+  gap: 8px;
+  flex: 1;
 }
 
 .tab-item {
-  cursor: pointer;
   padding: 8px 16px;
-  border-radius: 4px;
-  font-size: 16px;
+  background: #f5f7fa;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
   font-weight: 500;
   color: #606266;
-  transition: all 0.3s ease;
+  user-select: none;
 }
 
 .tab-item:hover {
+  background: #e6f7ff;
   color: #409EFF;
-  background-color: #ecf5ff;
 }
 
 .tab-item.active {
-  color: #409EFF;
-  background-color: #ecf5ff;
-  border-bottom: 2px solid #409EFF;
-}
-
-.header-controls {
-  display: flex;
-  align-items: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
 .chart-container {
-  width: 100%;
-  padding: 20px 0;
+  padding: 20px;
 }
 
 .time-range-selector {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
-  padding: 12px 16px;
+  margin-bottom: 20px;
+  padding: 15px;
   background: #f5f7fa;
-  border-radius: 6px;
-  border: 1px solid #ebeef5;
+  border-radius: 8px;
 }
 
 .time-label {
-  font-size: 14px;
-  font-weight: 500;
   color: #606266;
-  white-space: nowrap;
+  font-weight: 500;
+  font-size: 14px;
 }
 
 .time-separator {
-  font-size: 14px;
   color: #909399;
-  margin: 0 8px;
+  margin: 0 4px;
 }
 
 .table-container {
-  width: 100%;
-  padding: 20px 0;
-  overflow-x: auto;
-  min-width: 1000px;
-}
-
-.table-container :deep(.el-table) {
-  border-radius: 8px;
-  overflow: hidden;
-  width: 100%;
-  min-width: 1000px;
-  margin: 0;
-}
-
-.table-container :deep(.el-table__header-wrapper),
-.table-container :deep(.el-table__body-wrapper) {
-  width: 100%;
-}
-
-.table-container :deep(.el-table__header) {
-  width: 1000px !important;
-}
-
-.table-container :deep(.el-table__body) {
-  width: 1000px !important;
-}
-
-.table-container :deep(.el-table th),
-.table-container :deep(.el-table td) {
-  text-align: center;
-  padding: 12px;
-}
-
-.table-container :deep(.el-table th) {
-  background-color: #f5f7fa;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.table-container :deep(.el-table td) {
-  white-space: nowrap;
-}
-
-.table-container :deep(.el-table tr:hover) {
-  background-color: #f5f7fa;
+  padding: 20px;
 }
 
 .stat-card {
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  border: 1px solid #ebeef5;
-  text-align: center;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  border: none;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
 }
 
 .stat-content {
-  padding: 16px;
+  padding: 10px 0;
 }
 
 .stat-label {
-  color: #909399;
   font-size: 14px;
+  color: #909399;
   margin-bottom: 8px;
 }
 
 .stat-value {
-  color: #303133;
-  font-size: 24px;
-  font-weight: 600;
-}
-
-:deep(.el-loading-overlay) {
-  border-radius: 8px;
-}
-
-:deep(.el-tree-node__content) {
-  height: 32px;
-  line-height: 32px;
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .compare-container {
-  width: 100%;
-  min-height: 500px;
+  padding: 20px;
 }
 
 .compare-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 500px;
-}
-
-.compare-charts {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  width: 100%;
+  padding: 60px 20px;
 }
 
 .compare-content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  width: 100%;
+  min-height: 400px;
 }
 
 .compare-devices-header {
-  background: white;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f5f7fa;
   border-radius: 8px;
-  padding: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  border: 1px solid #ebeef5;
 }
 
 .compare-devices-title {
@@ -1226,85 +1178,70 @@ onMounted(() => {
 .compare-devices-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
 }
 
 .compare-device-tag {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
-  background: #f5f7fa;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  transition: all 0.3s ease;
-}
-
-.compare-device-tag:hover {
-  background: #ecf5ff;
-  border-color: #409eff;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 14px;
 }
 
 .device-tag-info {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 6px;
 }
 
 .device-tag-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: #303133;
+  font-weight: 600;
 }
 
 .device-tag-date {
-  font-size: 11px;
-  color: #909399;
+  font-size: 12px;
+  opacity: 0.9;
 }
 
 .compare-chart-wrapper {
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  border: 1px solid #ebeef5;
-  min-height: 500px;
+  height: 500px;
 }
 
 .compare-chart {
   width: 100%;
-  height: 500px;
-  min-height: 500px;
+  height: 100%;
 }
 
-:deep(.el-tree-node.is-current > .el-tree-node__content) {
-  background-color: #ecf5ff;
+:deep(.el-table) {
+  font-size: 14px;
 }
 
-:deep(.el-tree-node.is-current > .el-tree-node__content:hover) {
-  background-color: #ecf5ff;
+:deep(.el-table th) {
+  background: #f5f7fa !important;
+  color: #606266;
+  font-weight: 600;
+}
+
+:deep(.el-tree-node__content) {
+  height: 36px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
 }
 
 :deep(.el-tree-node__content:hover) {
-  background-color: #f5f7fa;
+  background: rgba(102, 126, 234, 0.1);
 }
 
-@media (max-width: 768px) {
-  .header h1 {
-    font-size: 20px;
-  }
-  
-  .main-content {
-    padding: 16px;
-  }
-  
-  .stat-value {
-    font-size: 18px;
-  }
-  
-  .tree-card {
-    height: 300px;
-    margin-bottom: 20px;
-  }
+:deep(.el-tree-node__content.is-current) {
+  background: rgba(102, 126, 234, 0.2);
+  font-weight: 500;
+}
+
+:deep(.el-pagination) {
+  justify-content: flex-end;
 }
 </style>
