@@ -3,6 +3,10 @@
     <el-header class="header">
       <h1>传感器数据实时展示系统</h1>
       <div class="header-right">
+        <el-button type="primary" @click="goToAlarmConfig" class="nav-btn">
+          <el-icon><Bell /></el-icon>
+          警报配置
+        </el-button>
         <el-dropdown @command="handleLogout" trigger="click">
           <span class="user-info">
             <el-icon><User /></el-icon>
@@ -192,9 +196,12 @@
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
 import axios from 'axios'
-import { Close, User, ArrowDown } from '@element-plus/icons-vue'
+import { Close, User, ArrowDown, Bell } from '@element-plus/icons-vue'
+
+const router = useRouter()
 
 // 当前用户信息
 const currentUser = computed(() => {
@@ -420,6 +427,11 @@ const fetchData = async () => {
   } finally {
     loading.value = false
   }
+}
+
+// 跳转到警报配置页面
+const goToAlarmConfig = () => {
+  router.push('/alarm-config')
 }
 
 // 退出登录
@@ -1072,6 +1084,22 @@ onMounted(() => {
 
 .user-info:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+.nav-btn {
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  color: #667eea;
+  font-weight: 500;
+  margin-right: 12px;
+  transition: all 0.3s ease;
+}
+
+.nav-btn:hover {
+  background: #fff;
+  color: #764ba2;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .main-content {

@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Login from './Login.vue'
 import Dashboard from './Dashboard.vue'
+import AlarmConfig from './AlarmConfig.vue'
 
 const routes = [
   {
@@ -12,6 +13,12 @@ const routes = [
     path: '/',
     name: 'Home',
     component: Dashboard,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/alarm-config',
+    name: 'AlarmConfig',
+    component: AlarmConfig,
     meta: { requiresAuth: true }
   }
 ]
