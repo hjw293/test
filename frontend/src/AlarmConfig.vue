@@ -99,7 +99,7 @@
           <!-- 放大详情对话框 -->
           <el-dialog
             v-model="dialogVisible"
-            width="680px"
+            width="80%"
             class="alarm-detail-dialog"
             :close-on-click-modal="true"
             destroy-on-close
@@ -553,6 +553,7 @@ onMounted(() => {
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   animation: dialogSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: 1000px;
 }
 
 @keyframes dialogSlideIn {
@@ -573,10 +574,10 @@ onMounted(() => {
 }
 
 .alarm-detail-dialog :deep(.el-dialog__headerbtn) {
-  top: 24px;
-  right: 24px;
-  width: 36px;
-  height: 36px;
+  top: 32px;
+  right: 32px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.04);
   transition: all 0.3s ease;
@@ -589,7 +590,7 @@ onMounted(() => {
 
 .alarm-detail-dialog :deep(.el-dialog__headerbtn .el-dialog__close) {
   color: #606266;
-  font-size: 18px;
+  font-size: 22px;
   font-weight: bold;
 }
 
@@ -601,20 +602,20 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24px 32px;
+  padding: 40px 48px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .dialog-header-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 24px;
 }
 
 .alarm-icon-wrapper {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
+  width: 80px;
+  height: 80px;
+  border-radius: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -632,71 +633,75 @@ onMounted(() => {
 }
 
 .alarm-icon {
-  font-size: 24px;
+  font-size: 36px;
   color: #fff;
 }
 
 .dialog-title-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
 .dialog-title {
-  font-size: 22px;
+  font-size: 30px;
   font-weight: 700;
   color: #fff;
   letter-spacing: -0.5px;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  line-height: 1.2;
 }
 
 .dialog-subtitle {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.85);
   font-weight: 400;
 }
 
 .alarm-detail-content {
-  padding: 20px 32px 24px;
+  padding: 36px 48px 40px;
   background: #f8f9fa;
 }
 
 .detail-row-row {
   display: flex;
-  gap: 16px;
+  gap: 20px;
+  flex-wrap: wrap;
 }
 
 .detail-col {
   flex: 1;
+  min-width: 280px;
   display: flex;
   flex-direction: column;
 }
 
 .detail-col.large {
-  flex: 1.5;
+  flex: 1;
+  min-width: 280px;
 }
 
 .section-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
+  gap: 10px;
+  font-size: 14px;
   font-weight: 600;
   color: #909399;
   text-transform: uppercase;
   letter-spacing: 1px;
-  margin-bottom: 10px;
+  margin-bottom: 16px;
 }
 
 .section-title .el-icon {
-  font-size: 14px;
+  font-size: 16px;
   color: #409EFF;
 }
 
 .detail-card {
   background: #fff;
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: 16px;
+  padding: 24px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid rgba(0, 0, 0, 0.04);
@@ -712,7 +717,7 @@ onMounted(() => {
 }
 
 .detail-content {
-  font-size: 14px;
+  font-size: 16px;
   color: #303133;
   line-height: 1.6;
   word-break: break-word;
@@ -720,6 +725,6 @@ onMounted(() => {
 
 .alarm-text {
   font-weight: 600;
-  font-size: 15px;
+  font-size: 18px;
 }
 </style>

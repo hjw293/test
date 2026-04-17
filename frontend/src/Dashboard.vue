@@ -7,6 +7,10 @@
           <el-icon><Bell /></el-icon>
           警报配置
         </el-button>
+        <el-button type="success" @click="goToBatchReportConfig" class="nav-btn">
+          <el-icon><Document /></el-icon>
+          批量报表
+        </el-button>
         <el-dropdown @command="handleLogout" trigger="click">
           <span class="user-info">
             <el-icon><User /></el-icon>
@@ -199,7 +203,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
 import axios from 'axios'
-import { Close, User, ArrowDown, Bell } from '@element-plus/icons-vue'
+import { Close, User, ArrowDown, Bell, Document } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
@@ -432,6 +436,11 @@ const fetchData = async () => {
 // 跳转到警报配置页面
 const goToAlarmConfig = () => {
   router.push('/alarm-config')
+}
+
+// 跳转到批量报表配置页面
+const goToBatchReportConfig = () => {
+  router.push('/batch-report-config')
 }
 
 // 退出登录

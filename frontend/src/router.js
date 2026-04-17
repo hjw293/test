@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Login from './Login.vue'
 import Dashboard from './Dashboard.vue'
 import AlarmConfig from './AlarmConfig.vue'
+import BatchReportConfig from './BatchReportConfig.vue'
 
 const routes = [
   {
@@ -19,6 +20,12 @@ const routes = [
     path: '/alarm-config',
     name: 'AlarmConfig',
     component: AlarmConfig,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/batch-report-config',
+    name: 'BatchReportConfig',
+    component: BatchReportConfig,
     meta: { requiresAuth: true }
   }
 ]
