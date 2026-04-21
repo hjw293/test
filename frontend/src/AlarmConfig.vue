@@ -28,6 +28,40 @@
           <div class="card-header">
             <div class="header-title">警报配置列表</div>
             <div class="header-controls">
+              <!-- 报警性质筛选 -->
+              <el-select
+                v-model="filterResponseReq"
+                placeholder="报警性质"
+                style="width: 150px; margin-right: 10px;"
+                clearable
+                @change="handleSearch"
+              >
+                <el-option label="全部" value="" />
+                <el-option
+                  v-for="item in responseReqOptions"
+                  :key="item"
+                  :label="item"
+                  :value="item"
+                />
+              </el-select>
+
+              <!-- 处理方式筛选 -->
+              <el-select
+                v-model="filterMachineAction"
+                placeholder="处理方式"
+                style="width: 150px; margin-right: 10px;"
+                clearable
+                @change="handleSearch"
+              >
+                <el-option label="全部" value="" />
+                <el-option
+                  v-for="item in machineActionOptions"
+                  :key="item"
+                  :label="item"
+                  :value="item"
+                />
+              </el-select>
+
               <el-input
                 v-model="searchAlarmKey"
                 placeholder="搜索警报ID"
@@ -198,6 +232,7 @@ const currentUser = computed(() => {
 })
 
 const API_URL = 'http://localhost:8080/api/alarm/page'
+const FILTER_OPTIONS_URL = 'http://localhost:8080/api/alarm/filter-options'
 
 // 数据状态
 const alarmList = ref([])
@@ -208,6 +243,12 @@ const pageSize = ref(12)
 const total = ref(0)
 const searchAlarmKey = ref('')
 
+// 筛选状态
+const filterResponseReq = ref('')
+const filterMachineAction = ref('')
+const responseReqOptions = ref([])
+const machineActionOptions = ref([])
+
 // 对话框状态
 const dialogVisible = ref(false)
 const selectedAlarm = ref(null)
@@ -216,19 +257,27 @@ const selectedAlarm = ref(null)
 const fetchAlarmData = async () => {
   loading.value = true
   errorMessage.value = ''
-  
+
   try {
     const token = localStorage.getItem('token')
-    
+
     const params = {
       pageNum: currentPage.value,
       pageSize: pageSize.value
     }
-    
+
     if (searchAlarmKey.value && searchAlarmKey.value.trim()) {
       params.alarmKey = searchAlarmKey.value.trim()
     }
-    
+
+    if (filterResponseReq.value) {
+      params.responseReq = filterResponseReq.value
+    }
+
+    if (filterMachineAction.value) {
+      params.machineAction = filterMachineAction.value
+    }
+
     const response = await axios.get(API_URL, {
       params,
       headers: {
@@ -262,10 +311,59 @@ const fetchAlarmData = async () => {
   }
 }
 
+// 从数据中提取筛选选项
+const extractFilterOptions = () => {
+  const responseReqSet = new Set()
+  const machineActionSet = new Set()
+
+  alarmList.value.forEach(alarm => {
+    if (alarm.responseReq) {
+      responseReqSet.add(alarm.responseReq)
+    }
+    if (alarm.machineAction) {
+      machineActionSet.add(alarm.machineAction)
+    }
+  })
+
+  responseReqOptions.value = Array.from(responseReqSet).sort()
+  machineActionOptions.value = Array.from(machineActionSet).sort()
+}
+
+// 从后端获取筛选选项
+const fetchFilterOptions = async () => {
+  try {
+    const token = localStorage.getItem('token')
+    const response = await axios.get(FILTER_OPTIONS_URL, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    })
+
+    console.log('筛选选项响应:', response.data)
+
+    if (response.data.code === 200) {
+      responseReqOptions.value = response.data.data?.responseReqOptions || []
+      machineActionOptions.value = response.data.data?.machineActionOptions || []
+      console.log('报警性质选项:', responseReqOptions.value)
+      console.log('处理方式选项:', machineActionOptions.value)
+    } else {
+      console.error('获取筛选选项失败:', response.data.message)
+      extractFilterOptions()
+    }
+  } catch (error) {
+    console.error('获取筛选选项失败:', error)
+    // 失败时使用本地提取
+    extractFilterOptions()
+  }
+}
+
 // 搜索
 const handleSearch = () => {
   currentPage.value = 1
   fetchAlarmData()
+  // 每次搜索后重新获取筛选选项，确保下拉框显示完整
+  fetchFilterOptions()
 }
 
 // 显示警报详情（放大效果）
@@ -320,6 +418,7 @@ const handleLogout = () => {
 // 页面加载时获取数据
 onMounted(() => {
   fetchAlarmData()
+  fetchFilterOptions()
 })
 </script>
 

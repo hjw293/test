@@ -34,4 +34,18 @@ public interface SensorDataService extends IService<SensorData> {
      * 刷新缓存（清除旧缓存并重新加载数据）
      */
     void refreshCache();
+
+    /**
+     * 根据设备名称获取传感器数据
+     * @param device 设备名称
+     * @return 传感器数据列表
+     */
+    List<SensorData> getDataByDevice(String device);
+
+    /**
+     * 批量获取多个设备的传感器数据
+     * @param devices 设备名称列表
+     * @return 设备名称 -> 数据列表 的映射
+     */
+    Map<String, List<SensorData>> getDataByDevices(List<String> devices);
 }

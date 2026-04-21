@@ -3,6 +3,7 @@ import Login from './Login.vue'
 import Dashboard from './Dashboard.vue'
 import AlarmConfig from './AlarmConfig.vue'
 import BatchReportConfig from './BatchReportConfig.vue'
+import CurveGroup from './CurveGroup.vue'
 
 const routes = [
   {
@@ -26,6 +27,12 @@ const routes = [
     path: '/batch-report-config',
     name: 'BatchReportConfig',
     component: BatchReportConfig,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/curve-group',
+    name: 'CurveGroup',
+    component: CurveGroup,
     meta: { requiresAuth: true }
   }
 ]

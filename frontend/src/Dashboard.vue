@@ -11,6 +11,10 @@
           <el-icon><Document /></el-icon>
           批量报表
         </el-button>
+        <el-button type="warning" @click="goToCurveGroup" class="nav-btn">
+          <el-icon><TrendCharts /></el-icon>
+          曲线展示
+        </el-button>
         <el-dropdown @command="handleLogout" trigger="click">
           <span class="user-info">
             <el-icon><User /></el-icon>
@@ -203,7 +207,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
 import axios from 'axios'
-import { Close, User, ArrowDown, Bell, Document } from '@element-plus/icons-vue'
+import { Close, User, ArrowDown, Bell, Document, TrendCharts } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
@@ -441,6 +445,11 @@ const goToAlarmConfig = () => {
 // 跳转到批量报表配置页面
 const goToBatchReportConfig = () => {
   router.push('/batch-report-config')
+}
+
+// 跳转到曲线展示页面
+const goToCurveGroup = () => {
+  router.push('/curve-group')
 }
 
 // 退出登录

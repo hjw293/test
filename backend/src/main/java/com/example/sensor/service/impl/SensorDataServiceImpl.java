@@ -313,4 +313,70 @@ public class SensorDataServiceImpl extends ServiceImpl<SensorDataMapper, SensorD
             throw new RuntimeException("缓存刷新失败: " + e.getMessage(), e);
         }
     }
+
+    /**
+     * 根据设备名称获取传感器数据
+     */
+    @Override
+    public List<SensorData> getDataByDevice(String device) {
+        // 先尝试从缓存获取
+        try {
+            Map<String, List<SensorData>> cachedData = (Map<String, List<SensorData>>) redisTemplate.opsForValue().get(CACHE_KEY);
+            if (cachedData != null && cachedData.containsKey(device)) {
+                logger.debug("从缓存获取设备 {} 的数据", device);
+                return cachedData.get(device);
+            }
+        } catch (Exception e) {
+            logger.warn("从缓存获取设备数据失败: {}", e.getMessage());
+        }
+
+        // 从数据库查询
+        List<SensorData> allData = this.list();
+        List<SensorData> deviceData = allData.stream()
+                .filter(item -> device.equals(item.getDevice()))
+                .sorted(Comparator.comparing(SensorData::getTimestamp))
+                .collect(Collectors.toList());
+
+        logger.debug("从数据库获取设备 {} 的数据，共 {} 条", device, deviceData.size());
+        return deviceData;
+    }
+
+    /**
+     * 批量获取多个设备的传感器数据
+     */
+    @Override
+    public Map<String, List<SensorData>> getDataByDevices(List<String> devices) {
+        Map<String, List<SensorData>> result = new HashMap<>();
+
+        // 先尝试从缓存获取
+        try {
+            Map<String, List<SensorData>> cachedData = (Map<String, List<SensorData>>) redisTemplate.opsForValue().get(CACHE_KEY);
+            if (cachedData != null) {
+                for (String device : devices) {
+                    if (cachedData.containsKey(device)) {
+                        result.put(device, cachedData.get(device));
+                    }
+                }
+                logger.debug("从缓存批量获取设备数据，获取到 {} 个设备的数据", result.size());
+                return result;
+            }
+        } catch (Exception e) {
+            logger.warn("从缓存批量获取设备数据失败: {}", e.getMessage());
+        }
+
+        // 从数据库查询
+        List<SensorData> allData = this.list();
+        for (String device : devices) {
+            List<SensorData> deviceData = allData.stream()
+                    .filter(item -> device.equals(item.getDevice()))
+                    .sorted(Comparator.comparing(SensorData::getTimestamp))
+                    .collect(Collectors.toList());
+            if (!deviceData.isEmpty()) {
+                result.put(device, deviceData);
+            }
+        }
+
+        logger.debug("从数据库批量获取设备数据，获取到 {} 个设备的数据", result.size());
+        return result;
+    }
 }

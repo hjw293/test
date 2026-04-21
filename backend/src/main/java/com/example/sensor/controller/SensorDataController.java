@@ -116,4 +116,50 @@ public class SensorDataController {
         }
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * 根据设备名称获取传感器数据
+     * GET /api/data/by-device?device=Device_A
+     */
+    @GetMapping("/data/by-device")
+    public ResponseEntity<Map<String, Object>> getDataByDevice(@RequestParam String device) {
+        try {
+            List<SensorData> data = sensorDataService.getDataByDevice(device);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 200);
+            response.put("message", "Success");
+            response.put("data", data);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("code", 500);
+            errorResponse.put("message", "获取设备数据失败: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+
+    /**
+     * 批量获取多个设备的传感器数据
+     * POST /api/data/batch-by-devices
+     */
+    @PostMapping("/data/batch-by-devices")
+    public ResponseEntity<Map<String, Object>> getBatchDataByDevices(@RequestBody List<String> devices) {
+        try {
+            Map<String, List<SensorData>> dataMap = sensorDataService.getDataByDevices(devices);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 200);
+            response.put("message", "Success");
+            response.put("data", dataMap);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("code", 500);
+            errorResponse.put("message", "批量获取设备数据失败: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
 }
