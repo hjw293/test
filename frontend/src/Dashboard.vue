@@ -3,17 +3,9 @@
     <el-header class="header">
       <h1>传感器数据实时展示系统</h1>
       <div class="header-right">
-        <el-button type="primary" @click="goToAlarmConfig" class="nav-btn">
-          <el-icon><Bell /></el-icon>
-          警报配置
-        </el-button>
-        <el-button type="success" @click="goToBatchReportConfig" class="nav-btn">
-          <el-icon><Document /></el-icon>
-          批量报表
-        </el-button>
-        <el-button type="warning" @click="goToCurveGroup" class="nav-btn">
-          <el-icon><TrendCharts /></el-icon>
-          曲线展示
+        <el-button type="default" @click="goToNavigation" class="back-btn">
+          <el-icon><ArrowLeft /></el-icon>
+          返回
         </el-button>
         <el-dropdown @command="handleLogout" trigger="click">
           <span class="user-info">
@@ -207,7 +199,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
 import axios from 'axios'
-import { Close, User, ArrowDown, Bell, Document, TrendCharts } from '@element-plus/icons-vue'
+import { Close, User, ArrowDown, ArrowLeft } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
@@ -439,19 +431,9 @@ const fetchData = async (refreshCache = false) => {
   }
 }
 
-// 跳转到警报配置页面
-const goToAlarmConfig = () => {
-  router.push('/alarm-config')
-}
-
-// 跳转到批量报表配置页面
-const goToBatchReportConfig = () => {
-  router.push('/batch-report-config')
-}
-
-// 跳转到曲线展示页面
-const goToCurveGroup = () => {
-  router.push('/curve-group')
+// 返回上一页
+const goToNavigation = () => {
+  router.push('/')
 }
 
 // 退出登录
@@ -1088,6 +1070,32 @@ onMounted(() => {
 .header-right {
   display: flex;
   align-items: center;
+  gap: 15px;
+}
+
+.back-btn {
+  background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #4a5568;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.back-btn:hover {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  border-color: transparent;
+}
+
+.back-btn .el-icon {
+  margin-right: 6px;
+  font-size: 16px;
 }
 
 .user-info {
@@ -1114,32 +1122,6 @@ onMounted(() => {
 
 .user-info .el-icon {
   font-size: 18px;
-}
-
-.nav-btn {
-  background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #4a5568;
-  font-weight: 600;
-  font-size: 14px;
-  padding: 10px 18px;
-  margin-right: 12px;
-  border-radius: 10px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.nav-btn:hover {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-  border-color: transparent;
-}
-
-.nav-btn .el-icon {
-  margin-right: 6px;
-  font-size: 16px;
 }
 
 .main-content {

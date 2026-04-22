@@ -159,7 +159,7 @@ const handleLogin = async () => {
   color: #fff;
   font-size: 44px;
   font-weight: bold;
-  margin-left: 30px;
+  margin-left: 20px;
   vertical-align: middle;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }

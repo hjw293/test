@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Login from './Login.vue'
+import NavigationPage from './NavigationPage.vue'
 import Dashboard from './Dashboard.vue'
 import AlarmConfig from './AlarmConfig.vue'
 import BatchReportConfig from './BatchReportConfig.vue'
@@ -14,6 +15,12 @@ const routes = [
   {
     path: '/',
     name: 'Home',
+    component: NavigationPage,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/dashboard',
+    name: 'Dashboard',
     component: Dashboard,
     meta: { requiresAuth: true }
   },
