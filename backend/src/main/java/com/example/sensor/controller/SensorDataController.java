@@ -100,6 +100,29 @@ public class SensorDataController {
     }
 
     /**
+     * 获取所有设备名称列表
+     * GET /api/data/devices
+     */
+    @GetMapping("/data/devices")
+    public ResponseEntity<Map<String, Object>> getDeviceList() {
+        try {
+            List<String> devices = sensorDataService.getDeviceList();
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 200);
+            response.put("message", "Success");
+            response.put("data", devices);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("code", 500);
+            errorResponse.put("message", "获取设备列表失败: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+
+    /**
      * 刷新Redis缓存（清除并重新加载）
      * POST /api/refresh-cache
      */

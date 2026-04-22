@@ -48,4 +48,10 @@ public interface SensorDataService extends IService<SensorData> {
      * @return 设备名称 -> 数据列表 的映射
      */
     Map<String, List<SensorData>> getDataByDevices(List<String> devices);
+
+    /**
+     * 获取所有设备名称列表
+     * @return 设备名称列表
+     */
+    List<String> getDeviceList();
 }

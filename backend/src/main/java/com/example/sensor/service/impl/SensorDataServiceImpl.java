@@ -379,4 +379,29 @@ public class SensorDataServiceImpl extends ServiceImpl<SensorDataMapper, SensorD
         logger.debug("从数据库批量获取设备数据，获取到 {} 个设备的数据", result.size());
         return result;
     }
+
+    /**
+     * 获取所有设备名称列表
+     */
+    @Override
+    public List<String> getDeviceList() {
+        try {
+            // 先尝试从缓存获取
+            Map<String, List<SensorData>> cachedData = (Map<String, List<SensorData>>) redisTemplate.opsForValue().get(CACHE_KEY);
+            if (cachedData != null) {
+                return new ArrayList<>(cachedData.keySet());
+            }
+        } catch (Exception e) {
+            logger.warn("从缓存获取设备列表失败: {}", e.getMessage());
+        }
+
+        // 从数据库查询
+        List<SensorData> allData = this.list();
+        return allData.stream()
+                .map(SensorData::getDevice)
+                .filter(device -> device != null)
+                .distinct()
+                .sorted()
+                .collect(Collectors.toList());
+    }
 }
