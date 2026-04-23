@@ -109,7 +109,7 @@ const handleLogin = async () => {
       ElMessage.success('登录成功')
 
       // 跳转到首页
-      router.push('/')
+      router.push('/navigation')
     } else {
       ElMessage.error(response.data.message || '登录失败')
     }

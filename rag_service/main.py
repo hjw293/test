@@ -4,7 +4,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import chromadb
-from chromadb.config import Settings
 import ollama
 import requests
 
@@ -20,10 +19,7 @@ app.add_middleware(
 )
 
 # 初始化 ChromaDB
-chroma_client = chromadb.Client(Settings(
-    persist_directory="./chroma_db",
-    anonymized_telemetry=False
-))
+chroma_client = chromadb.PersistentClient(path="./chroma_db")
 
 def get_collection():
     try:
@@ -54,6 +50,21 @@ def call_function(function_name: str, arguments: dict) -> str:
             return "无法获取设备状态数据"
         except Exception as e:
             return f"获取设备状态失败: {str(e)}"
+    elif function_name == "count_report_configs":
+        try:
+            # 调用后端 API 统计报表数量
+            response = requests.get("http://localhost:8080/api/batch-report/count")
+            if response.ok:
+                data = response.json()
+                if data.get("code") == 200:
+                    report_data = data.get("data", {})
+                    total = report_data.get("total", 0)
+                    energy = report_data.get("energyCount", 0)
+                    health = report_data.get("healthCount", 0)
+                    return f"报表配置统计：共 {total} 个报表，其中能耗报告 {energy} 个，健康指数报告 {health} 个。"
+            return "无法获取报表统计数据"
+        except Exception as e:
+            return f"获取报表统计失败: {str(e)}"
     return f"未知函数: {function_name}"
 
 # ==========================================
@@ -102,14 +113,12 @@ def build_system_prompt(contexts: List[str]) -> str:
 知识库内容：
 {context_text}
 
-你可以调用以下函数来获取实时数据：
-- get_device_status: 获取设备状态统计（当用户询问设备数量、停机状态时必须调用）
-
 回答要求：
-1. 当用户询问设备数量、停机数量时，必须先调用 get_device_status 函数获取准确数据
-2. 直接使用函数返回的数据回答，不要估算
-3. 如果知识库有相关信息，可以结合回答
-4. 回答要简洁专业"""
+1. 如果用户询问设备数量、停机数量等问题，直接根据提供的数据回答，不要提及数据来源或调用方式
+2. 如果知识库中有相关信息，直接使用并回答
+3. 如果知识库中没有相关内容或不知道如何回答，请直接说"抱歉，我目前没有这方面的信息，无法回答您的问题"
+4. 回答要简洁专业，通俗易懂
+5. 绝对不要向用户提及任何代码、函数、方法等技术人员相关内容"""
 
 @app.post("/api/rag/chat", response_model=AnswerResponse)
 async def chat_with_function(request: ChatRequest):
@@ -121,10 +130,19 @@ async def chat_with_function(request: ChatRequest):
         question = request.question.lower()
         need_device_status = any(k in question for k in ['设备', '停机', '机器', '台数', '多少台'])
 
+        # 3. 检查是否需要获取报表统计
+        need_report_count = any(k in question for k in ['报表', '报告', '能耗', '健康', '多少个', '数量', '多少种'])
+
         device_info = ""
+        report_info = ""
+
         if need_device_status:
             # 先获取实时数据
             device_info = call_function("get_device_status", {})
+
+        if need_report_count:
+            # 获取报表统计数据
+            report_info = call_function("count_report_configs", {})
 
         # 3. 构建系统提示
         system_prompt = build_system_prompt(contexts)
@@ -140,6 +158,10 @@ async def chat_with_function(request: ChatRequest):
         # 如果需要设备数据，将其注入
         if need_device_status and device_info:
             messages.append({"role": "system", "content": f"\n\n重要实时数据：{device_info}"})
+
+        # 如果需要报表统计数据，将其注入
+        if need_report_count and report_info:
+            messages.append({"role": "system", "content": f"\n\n重要实时数据：{report_info}"})
 
         messages.append({"role": "user", "content": request.question})
 

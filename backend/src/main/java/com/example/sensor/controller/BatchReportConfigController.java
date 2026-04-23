@@ -73,4 +73,34 @@ public class BatchReportConfigController {
             return ResponseEntity.status(500).body(errorResponse);
         }
     }
+
+    /**
+     * 统计报表配置数量
+     * GET /api/batch-report/count
+     * @param reportCategory 报告类别（可选，0=能耗报告，1=健康指数报告）
+     * @return 报表数量统计
+     */
+    @GetMapping("/count")
+    public ResponseEntity<Map<String, Object>> countReportConfigs(
+            @RequestParam(required = false) Integer reportCategory) {
+
+        logger.info("请求统计报表配置数量，报告类别: {}", reportCategory);
+
+        try {
+            Map<String, Integer> countData = batchReportConfigService.countReportConfigs(reportCategory);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 200);
+            response.put("message", "Success");
+            response.put("data", countData);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("统计报表配置数量失败", e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("code", 500);
+            errorResponse.put("message", "统计报表配置数量失败: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
 }

@@ -8,13 +8,18 @@ import CurveGroup from './CurveGroup.vue'
 
 const routes = [
   {
+    path: '/',
+    name: 'Home',
+    component: Login
+  },
+  {
     path: '/login',
     name: 'Login',
     component: Login
   },
   {
-    path: '/',
-    name: 'Home',
+    path: '/navigation',
+    name: 'Navigation',
     component: NavigationPage,
     meta: { requiresAuth: true }
   },
@@ -56,9 +61,13 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth && !token) {
     // 需要登录但没有token，跳转到登录页
     next('/login')
-  } else if (to.path === '/login' && token) {
-    // 已登录用户访问登录页，跳转到首页
-    next('/')
+  } else if (to.path === '/' || to.path === '/login') {
+    // 根路径或登录页：如果已登录则跳转到导航页
+    if (token) {
+      next('/navigation')
+    } else {
+      next()
+    }
   } else {
     next()
   }

@@ -58,11 +58,8 @@
 
 <script setup>
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { HomeFilled, Bell, Document, TrendCharts, User, ArrowDown } from '@element-plus/icons-vue'
 import CustomerService from '@/components/CustomerService.vue'
-
-const router = useRouter()
 
 // 当前用户信息
 const currentUser = computed(() => {
@@ -70,6 +67,7 @@ const currentUser = computed(() => {
   return userStr ? JSON.parse(userStr) : null
 })
 
+// 跳转到对应平台
 const goTo = (name) => {
   const routes = {
     'dashboard': '/dashboard',
@@ -77,7 +75,7 @@ const goTo = (name) => {
     'batch-report-config': '/batch-report-config',
     'curve-group': '/curve-group'
   }
-  router.push(routes[name])
+  window.location.href = routes[name]
 }
 
 // 退出登录
