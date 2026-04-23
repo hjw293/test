@@ -195,7 +195,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
 import axios from 'axios'
@@ -977,23 +977,6 @@ const updateCompareCharts = () => {
   }, 100)
 }
 
-// 监听activeTab变化，切换到对比分析时更新图表
-watch(activeTab, (newTab) => {
-  if (newTab === 'compare') {
-    // 延迟执行，确保DOM已渲染
-    setTimeout(() => {
-      updateCompareCharts()
-    }, 100)
-  } else if (newTab === 'chart') {
-    // 当切换到图表视图时，延迟执行更新，确保DOM已经渲染
-    setTimeout(() => {
-      // 强制重新初始化图表
-      chart = null
-      updateChart()
-    }, 100)
-  }
-})
-
 // 监听设备选择变化
 watch(selectedDevice, () => {
   // 切换设备时清除时间范围，显示全部数据
@@ -1007,9 +990,14 @@ watch(selectedDevice, () => {
   currentPage.value = 1
 })
 
-// 监听标签切换
-watch(activeTab, (newTab) => {
-  if (newTab === 'chart') {
+// 监听activeTab变化，切换到对比分析时更新图表
+const stopActiveTabWatch = watch(activeTab, (newTab) => {
+  if (newTab === 'compare') {
+    // 延迟执行，确保DOM已渲染
+    setTimeout(() => {
+      updateCompareCharts()
+    }, 100)
+  } else if (newTab === 'chart') {
     // 当切换到图表视图时，延迟执行更新，确保DOM已经渲染
     setTimeout(() => {
       // 强制重新初始化图表
@@ -1037,6 +1025,18 @@ const statistics = computed(() => {
 // 页面加载时获取数据
 onMounted(() => {
   fetchData()
+})
+
+// 组件卸载时清理
+onUnmounted(() => {
+  stopActiveTabWatch()
+  // 清理图表实例
+  if (chart) {
+    chart.dispose()
+    chart = null
+  }
+  compareCharts.value.forEach(c => c.dispose())
+  compareCharts.value = []
 })
 </script>
 

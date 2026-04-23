@@ -50,6 +50,9 @@
         <span class="nav-text-cn">设备曲线组展示</span>
       </div>
     </div>
+
+    <!-- 客服组件 -->
+    <CustomerService />
   </div>
 </template>
 
@@ -57,6 +60,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { HomeFilled, Bell, Document, TrendCharts, User, ArrowDown } from '@element-plus/icons-vue'
+import CustomerService from '@/components/CustomerService.vue'
 
 const router = useRouter()
 
@@ -134,17 +138,17 @@ const handleLogout = () => {
 .user-info {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   color: #fff;
   cursor: pointer;
-  padding: 10px 18px;
-  border-radius: 12px;
+  padding: 12px 24px;
+  border-radius: 16px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   font-weight: 500;
-  font-size: 14px;
+  font-size: 28px;
 }
 
 .user-info:hover {
@@ -154,7 +158,7 @@ const handleLogout = () => {
 }
 
 .user-info .el-icon {
-  font-size: 18px;
+  font-size: 28px;
 }
 
 .nav-content {
@@ -180,11 +184,11 @@ const handleLogout = () => {
 /* 底部导航按钮 */
 .bottom-nav {
   position: fixed;
-  bottom: 40px;
+  bottom: 0;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 50px;
+  gap: 0;
   z-index: 10;
 }
 
@@ -193,9 +197,9 @@ const handleLogout = () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 320px;
-  height: 240px;
-  border-radius: 20px;
+  width: 380px;
+  height: 220px;
+  border-radius: 0;
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
@@ -207,8 +211,8 @@ const handleLogout = () => {
 }
 
 .nav-icon {
-  font-size: 60px;
-  margin-bottom: 15px;
+  font-size: 70px;
+  margin-bottom: 20px;
 }
 
 .nav-text-en {

@@ -89,7 +89,7 @@ public class SensorDataController {
     public ResponseEntity<Map<String, Object>> clearCache() {
         Map<String, Object> response = new HashMap<>();
         try {
-            ((com.example.sensor.service.impl.SensorDataServiceImpl) sensorDataService).clearCache();
+            sensorDataService.clearCache();
             response.put("code", 200);
             response.put("message", "缓存已清除，下次请求将从数据库重新加载数据");
         } catch (Exception e) {

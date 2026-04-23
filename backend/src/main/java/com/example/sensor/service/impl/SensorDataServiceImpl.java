@@ -22,9 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * 传感器数据 Service 业务实现
@@ -230,8 +228,9 @@ public class SensorDataServiceImpl extends ServiceImpl<SensorDataMapper, SensorD
     }
 
     /**
-     * 清除缓存（用于数据更新时调用）
+     * 清除缓存
      */
+    @Override
     public void clearCache() {
         try {
             redisTemplate.delete(CACHE_KEY);

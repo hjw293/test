@@ -11,7 +11,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -102,5 +104,29 @@ public class AlarmConfigServiceImpl extends ServiceImpl<AlarmConfigMapper, Alarm
                 .distinct()
                 .sorted()
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 获取设备状态统计（停机数量）
+     */
+    @Override
+    public Map<String, Integer> getDeviceStatusCount() {
+        Map<String, Integer> result = new HashMap<>();
+
+        // 统计停机设备数量：languageName="中文" 且 machineAction="停机"
+        LambdaQueryWrapper<AlarmConfig> stoppedWrapper = new LambdaQueryWrapper<>();
+        stoppedWrapper.eq(AlarmConfig::getLanguageName, "中文");
+        stoppedWrapper.eq(AlarmConfig::getMachineAction, "停机");
+        int stoppedCount = (int) this.count(stoppedWrapper);
+
+        // 统计总设备数量：languageName="中文"
+        LambdaQueryWrapper<AlarmConfig> totalWrapper = new LambdaQueryWrapper<>();
+        totalWrapper.eq(AlarmConfig::getLanguageName, "中文");
+        int totalCount = (int) this.count(totalWrapper);
+
+        result.put("stopped", stoppedCount);
+        result.put("total", totalCount);
+
+        return result;
     }
 }

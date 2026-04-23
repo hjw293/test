@@ -99,4 +99,26 @@ public class AlarmConfigController {
             return ResponseEntity.status(500).body(errorResponse);
         }
     }
+
+    /**
+     * 获取设备状态统计（停机数量）
+     * GET /api/alarm/device-status-count
+     */
+    @GetMapping("/device-status-count")
+    public ResponseEntity<Map<String, Object>> getDeviceStatusCount() {
+        try {
+            Map<String, Integer> count = alarmConfigService.getDeviceStatusCount();
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 200);
+            response.put("message", "Success");
+            response.put("data", count);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("获取设备状态统计失败", e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("code", 500);
+            errorResponse.put("message", "获取设备状态统计失败: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
 }

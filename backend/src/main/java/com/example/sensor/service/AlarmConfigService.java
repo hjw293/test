@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.sensor.entity.AlarmConfig;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 警报配置 Service 业务接口
@@ -35,4 +36,10 @@ public interface AlarmConfigService extends IService<AlarmConfig> {
      * @return 处理方式列表
      */
     List<String> getAllMachineAction();
+
+    /**
+     * 获取设备状态统计（停机数量）
+     * @return 设备状态统计，包含停机数量和总数
+     */
+    Map<String, Integer> getDeviceStatusCount();
 }

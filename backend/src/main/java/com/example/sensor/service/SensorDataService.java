@@ -36,6 +36,11 @@ public interface SensorDataService extends IService<SensorData> {
     void refreshCache();
 
     /**
+     * 清除缓存
+     */
+    void clearCache();
+
+    /**
      * 根据设备名称获取传感器数据
      * @param device 设备名称
      * @return 传感器数据列表

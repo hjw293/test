@@ -36,6 +36,11 @@ public class AuthInterceptor implements HandlerInterceptor {
             return true;
         }
 
+        // 允许公开的设备状态查询接口（客服组件需要）
+        if (uri.equals("/api/alarm/device-status-count")) {
+            return true;
+        }
+
         // 检查Authorization头
         String authorization = request.getHeader("Authorization");
         if (authorization == null || !authorization.startsWith("Bearer ")) {

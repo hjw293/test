@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com)"
+      "WebFetch(domain:minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com)",
+      "Bash(curl -X POST http://localhost:8000/api/rag/ask -H \"Content-Type: application/json\" -d \"{\\\\\"question\\\\\":\\\\\"测试\\\\\"}\")",
+      "Bash(curl -X GET http://localhost:8000/health)",
+      "Bash(curl -X POST http://localhost:8000/api/rag/ask -H \"Content-Type: application/json\" --data-raw '{\"question\":\"测试\"}')",
+      "Bash(python -c ' *)"
     ]
   }
 }
