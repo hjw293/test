@@ -163,7 +163,7 @@ const currentUser = computed(() => {
 const GROUP_IDS_API = 'http://localhost:8080/api/curve-group/group-ids'
 const BY_GROUP_API = 'http://localhost:8080/api/curve-group/by-group'
 const ALL_GROUPED_API = 'http://localhost:8080/api/curve-group/all-grouped'
-const ALL_DATA_API = 'http://localhost:8080/api/data'
+const CURVE_DATA_API = 'http://localhost:8080/api/curve-data/by-name-ids'
 
 // 状态
 const groupLoading = ref(false)
@@ -173,8 +173,7 @@ const groupIdOptions = ref([])
 const groupCurveCounts = ref({})
 const selectedGroupId = ref(null)
 const currentCurves = ref([])
-const allSensorData = ref({})  // 所有传感器数据
-const availableDevices = ref([])  // 可用设备列表
+const curveDataMap = ref({})  // 曲线数据 Map<nameId, CurveData[]>
 
 // 图表
 const chartRef = ref(null)
@@ -248,9 +247,10 @@ const loadGroupCurves = async (groupNameId) => {
       currentCurves.value = response.data.data || []
       await nextTick()
 
-      // 如果传感器数据还没加载，先加载传感器数据
-      if (availableDevices.value.length === 0) {
-        await fetchAllSensorData()
+      // 获取该组所有曲线的名称ID
+      const nameIds = currentCurves.value.map(c => c.curveNameId).filter(id => id != null)
+      if (nameIds.length > 0) {
+        await fetchCurveDataByNameIds(nameIds)
       }
 
       renderChart()
@@ -269,21 +269,35 @@ const selectGroup = (gid) => {
   loadGroupCurves(gid)
 }
 
-// 加载所有传感器数据
-const fetchAllSensorData = async () => {
+// 根据曲线名称ID列表获取曲线数据
+const fetchCurveDataByNameIds = async (nameIds) => {
   try {
-    const response = await axios.get(ALL_DATA_API, { headers: getAuthHeaders() })
+    const response = await axios.get(CURVE_DATA_API, {
+      params: { nameIds: nameIds.join(',') },
+      headers: getAuthHeaders()
+    })
     if (response.data.code === 200) {
-      allSensorData.value = response.data.data || {}
-      // 获取所有设备名称列表
-      availableDevices.value = Object.keys(allSensorData.value)
-      console.log('已加载传感器数据，设备列表:', availableDevices.value)
-      console.log('传感器数据详情:', JSON.stringify(allSensorData.value, null, 2))
+      const dataList = response.data.data || []
+      // 按 nameId 分组
+      const grouped = {}
+      dataList.forEach(item => {
+        const key = String(item.nameId)
+        if (!grouped[key]) {
+          grouped[key] = []
+        }
+        grouped[key].push(item)
+      })
+      // 每个组内按时间排序
+      for (const key in grouped) {
+        grouped[key].sort((a, b) => new Date(a.realTime) - new Date(b.realTime))
+      }
+      curveDataMap.value = grouped
+      console.log('已加载曲线数据:', curveDataMap.value)
     } else {
-      console.error('获取传感器数据失败:', response.data.message)
+      console.error('获取曲线数据失败:', response.data.message)
     }
   } catch (error) {
-    console.error('获取传感器数据失败:', error)
+    console.error('获取曲线数据失败:', error)
   }
 }
 
@@ -297,65 +311,40 @@ const formatTime = (realTime) => {
   return realTime
 }
 
-// 基于配置获取曲线数据（当前从 sensor_data 表获取，没有数据则返回空）
+// 基于配置获取曲线数据（从 curve_data 表获取）
 const getRealCurveData = (curve) => {
-  // 如果没有可用数据，返回空数组（不显示曲线）
-  if (availableDevices.value.length === 0) {
-    console.log(`曲线 ${curve.curveNameId}: 没有传感器数据`)
+  const nameId = String(curve.curveNameId)
+  if (!nameId) {
+    console.log(`曲线 ${curve.curveNameId}: 没有曲线名称ID`)
     return []
   }
 
-  let deviceName = ''
-
-  // 如果有 curveRef，尝试匹配设备
-  if (curve.curveRef) {
-    deviceName = curve.curveRef.toString()
-    let deviceData = allSensorData.value[deviceName]
-
-    // 如果设备不存在，尝试模糊匹配
-    if (!deviceData) {
-      const matchedDevice = availableDevices.value.find(d =>
-        d.includes(deviceName) || deviceName.includes(d)
-      )
-      if (matchedDevice) {
-        deviceName = matchedDevice
-        deviceData = allSensorData.value[deviceName]
-      }
-    }
-
-    if (deviceData && deviceData.length > 0) {
-      // 按时间戳排序并提取数值
-      const sortedData = [...deviceData].sort((a, b) => a.timestamp - b.timestamp)
-      console.log(`曲线 ${curve.curveNameId} 使用设备 ${deviceName}, 数据点: ${sortedData.length}`)
-      return sortedData.map(item => item.value)
-    }
+  const dataList = curveDataMap.value[nameId]
+  if (!dataList || dataList.length === 0) {
+    console.log(`曲线 ${nameId}: 没有数据`)
+    return []
   }
 
-  // 没有 curveRef 或匹配失败，不显示
-  console.log(`曲线 ${curve.curveNameId}: 没有关联数据`)
-  return []
+  console.log(`曲线 ${nameId} 使用真实数据, 数据点: ${dataList.length}`)
+  return dataList.map(item => item.value)
 }
 
 // 生成X轴时间标签（基于真实数据的时间范围）
-const generateXAxisFromData = (dataList) => {
-  if (!dataList || dataList.length === 0) {
+const generateXAxisFromData = (curves) => {
+  if (!curves || curves.length === 0) {
     return []
   }
 
-  // 找到所有数据中最长的时间序列
-  const maxLength = Math.max(...dataList.map(d => d.length))
+  // 找到第一个有数据的曲线
+  for (const curve of curves) {
+    const nameId = curve.curveNameId
+    const dataList = curveDataMap.value[nameId]
+    if (dataList && dataList.length > 0) {
+      return dataList.map(item => formatTime(item.realTime))
+    }
+  }
 
-  if (maxLength === 0) return []
-
-  // 找到第一个有数据的设备来生成时间标签
-  const firstDeviceWithData = dataList.find(d => d.length > 0)
-  if (!firstDeviceWithData) return []
-
-  // 按时间戳排序
-  const sortedData = [...firstDeviceWithData].sort((a, b) => a.timestamp - b.timestamp)
-
-  // 生成时间标签
-  return sortedData.map(item => formatTime(item.realTime))
+  return []
 }
 
 // 备用：生成模拟曲线数据（当没有真实数据时使用）
@@ -407,7 +396,7 @@ const renderChart = () => {
   const curvesDataList = curves.map((curve) => getRealCurveData(curve))
 
   // 生成X轴时间标签（基于真实数据）
-  const xData = generateXAxisFromData(curvesDataList)
+  const xData = generateXAxisFromData(curves)
 
   // 如果没有真实数据，回退到模拟数据
   const useRealData = xData.length > 0
@@ -554,7 +543,7 @@ const renderChart = () => {
       data: xData,
       boundaryGap: false,
       axisLine: { lineStyle: { color: timeDivColor || '#ccc' } },
-      axisLabel: { color: '#666', rotate: 0, interval: Math.floor(pointCount / 8) },
+      axisLabel: { color: '#666', rotate: 0, interval: xData.length > 8 ? Math.floor(xData.length / 8) : 0 },
       splitLine: { show: true, lineStyle: { color: timeDivColor + '20', type: 'dashed' } }
     },
     yAxis: yAxis,
@@ -607,7 +596,6 @@ watch(currentCurves, async () => {
 
 onMounted(() => {
   fetchGroupData()
-  fetchAllSensorData()  // 获取传感器数据
   window.addEventListener('resize', handleResize)
 })
 

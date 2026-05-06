@@ -6,6 +6,7 @@ from typing import List, Optional, Dict, Any
 import chromadb
 import ollama
 import requests
+import re
 
 app = FastAPI(title="RAG Knowledge Base API with Function Calling")
 
@@ -65,6 +66,36 @@ def call_function(function_name: str, arguments: dict) -> str:
             return "无法获取报表统计数据"
         except Exception as e:
             return f"获取报表统计失败: {str(e)}"
+    elif function_name == "count_response_req":
+        try:
+            # 调用后端 API 获取报警性质种类数量
+            response = requests.get("http://localhost:8080/api/alarm/response-req-count")
+            if response.ok:
+                data = response.json()
+                if data.get("code") == 200:
+                    alarm_data = data.get("data", {})
+                    count = alarm_data.get("count", 0)
+                    types = alarm_data.get("types", [])
+                    types_str = "、".join(types) if types else "无"
+                    return f"报警配置系统共有 {count} 种报警性质，分别是：{types_str}。"
+            return "无法获取报警性质数据"
+        except Exception as e:
+            return f"获取报警性质失败: {str(e)}"
+    elif function_name == "get_response_req_stats":
+        try:
+            # 调用后端 API 获取每种报警性质的数量
+            response = requests.get("http://localhost:8080/api/alarm/response-req-stats")
+            if response.ok:
+                data = response.json()
+                if data.get("code") == 200:
+                    stats = data.get("data", [])
+                    if not stats:
+                        return "暂无报警性质统计数据"
+                    stats_str = "、".join([f"{item.get('type', '未知')} {item.get('count', 0)} 条" for item in stats])
+                    return f"各报警性质数量统计：{stats_str}。"
+            return "无法获取报警性质统计"
+        except Exception as e:
+            return f"获取报警性质统计失败: {str(e)}"
     return f"未知函数: {function_name}"
 
 # ==========================================
@@ -133,8 +164,14 @@ async def chat_with_function(request: ChatRequest):
         # 3. 检查是否需要获取报表统计
         need_report_count = any(k in question for k in ['报表', '报告', '能耗', '健康', '多少个', '数量', '多少种'])
 
+        # 4. 检查是否需要获取报警性质
+        need_response_req = any(k in question for k in ['报警性质', '报警类型', '报警有哪些', '有几种报警'])
+        need_response_req_stats = any(k in question for k in ['报警性质数量', '报警性质统计', '每种报警', '各报警', '多少条', '多少个报警'])
+
         device_info = ""
         report_info = ""
+        response_req_info = ""
+        response_req_stats_info = ""
 
         if need_device_status:
             # 先获取实时数据
@@ -143,6 +180,14 @@ async def chat_with_function(request: ChatRequest):
         if need_report_count:
             # 获取报表统计数据
             report_info = call_function("count_report_configs", {})
+
+        if need_response_req:
+            # 获取报警性质统计
+            response_req_info = call_function("count_response_req", {})
+
+        if need_response_req_stats:
+            # 获取每种报警性质的数量
+            response_req_stats_info = call_function("get_response_req_stats", {})
 
         # 3. 构建系统提示
         system_prompt = build_system_prompt(contexts)
@@ -162,6 +207,14 @@ async def chat_with_function(request: ChatRequest):
         # 如果需要报表统计数据，将其注入
         if need_report_count and report_info:
             messages.append({"role": "system", "content": f"\n\n重要实时数据：{report_info}"})
+
+        # 如果需要报警性质数据，将其注入
+        if need_response_req and response_req_info:
+            messages.append({"role": "system", "content": f"\n\n重要实时数据：{response_req_info}"})
+
+        # 如果需要每种报警性质数量数据，将其注入
+        if need_response_req_stats and response_req_stats_info:
+            messages.append({"role": "system", "content": f"\n\n重要实时数据：{response_req_stats_info}"})
 
         messages.append({"role": "user", "content": request.question})
 
@@ -183,6 +236,43 @@ async def chat_with_function(request: ChatRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/rag/debug")
+async def debug_chat(request: ChatRequest):
+    question = request.question
+    print(f"\n=== DEBUG ===")
+    print(f"Original question: {question}")
+
+    # Check knowledge base
+    contexts = retrieve_context(question)
+    print(f"Contexts from KB: {contexts}")
+
+    # Check regex
+    q_lower = question.lower()
+    print(f"Lower question: {q_lower}")
+
+    match = re.search(r'其中(.+?)有多少', q_lower)
+    if match:
+        specific = match.group(1).strip()
+        print(f"Extracted from regex: '{specific}'")
+
+        excluded = ['设备', '报表', '报告', '能耗', '健康']
+        if any(k in specific for k in excluded):
+            print("Would be excluded due to keyword filter")
+        else:
+            print(f"Would call API for: '{specific}'")
+            try:
+                resp = requests.get("http://localhost:8080/api/alarm/response-req-count-by-type",
+                                   params={"responseReq": specific}, timeout=10)
+                print(f"API response status: {resp.status_code}")
+                print(f"API response: {resp.text}")
+            except Exception as e:
+                print(f"API call failed: {e}")
+    else:
+        print("Regex didn't match")
+
+    print(f"=== END DEBUG ===\n")
+    return {"question": question, "contexts": contexts}
 
 @app.post("/api/rag/ingest")
 async def ingest_document(text: str, metadata: dict = None):

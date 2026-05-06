@@ -1,5 +1,8 @@
 <template>
   <div class="login-container">
+    <!-- 顶部黑色阴影 -->
+    <div class="top-shadow"></div>
+
     <!-- 品牌展示区域 -->
     <div class="brand-area">
       <img src="@/resource/logo.png" alt="Logo" class="brand-logo" />
@@ -138,6 +141,18 @@ const handleLogin = async () => {
   background-position: center center;
   background-repeat: no-repeat;
   position: relative;
+}
+
+/* 顶部黑色阴影 */
+.top-shadow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), transparent);
+  z-index: 9;
+  pointer-events: none;
 }
 
 /* 品牌展示区域 */

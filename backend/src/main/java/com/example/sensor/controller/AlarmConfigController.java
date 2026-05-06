@@ -121,4 +121,52 @@ public class AlarmConfigController {
             return ResponseEntity.status(500).body(errorResponse);
         }
     }
-}
+
+    /**
+     * 获取报警性质种类数量
+     * GET /api/alarm/response-req-count
+     */
+    @GetMapping("/response-req-count")
+    public ResponseEntity<Map<String, Object>> getResponseReqCount() {
+        try {
+            List<String> responseReqList = alarmConfigService.getAllResponseReq();
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 200);
+            response.put("message", "Success");
+            response.put("data", new HashMap<String, Object>() {{
+                put("count", responseReqList.size());
+                put("types", responseReqList);
+            }});
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("获取报警性质种类数量失败", e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("code", 500);
+            errorResponse.put("message", "获取报警性质种类数量失败: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+
+    /**
+     * 获取每种报警性质的数量统计
+     * GET /api/alarm/response-req-stats
+     */
+    @GetMapping("/response-req-stats")
+    public ResponseEntity<Map<String, Object>> getResponseReqStats() {
+        try {
+            List<Map<String, Object>> stats = alarmConfigService.getResponseReqStats();
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 200);
+            response.put("message", "Success");
+            response.put("data", stats);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("获取报警性质统计失败", e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("code", 500);
+            errorResponse.put("message", "获取报警性质统计失败: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+
+    }

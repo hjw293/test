@@ -1,5 +1,8 @@
 <template>
   <div class="navigation-container">
+    <!-- 顶部黑色阴影 -->
+    <div class="top-shadow"></div>
+
     <!-- 品牌展示区域 -->
     <div class="brand-area">
       <img src="@/resource/logo.png" alt="Logo" class="brand-logo" />
@@ -8,18 +11,11 @@
 
     <!-- 用户信息区域 -->
     <div class="user-area">
-      <el-dropdown @command="handleLogout" trigger="click">
-        <span class="user-info">
-          <el-icon><User /></el-icon>
-          <span>{{ currentUser?.username || '用户' }}</span>
-          <el-icon class="el-icon--right"><ArrowDown /></el-icon>
-        </span>
-        <template #dropdown>
-          <el-dropdown-menu>
-            <el-dropdown-item command="logout">退出登录</el-dropdown-item>
-          </el-dropdown-menu>
-        </template>
-      </el-dropdown>
+      <div class="user-info">
+        <el-icon class="user-icon"><Avatar /></el-icon>
+        <span class="user-text">{{ currentUser?.username || '用户' }}</span>
+      </div>
+      <div class="logout-link" @click="handleLogout">注销</div>
     </div>
 
     
@@ -58,7 +54,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { HomeFilled, Bell, Document, TrendCharts, User, ArrowDown } from '@element-plus/icons-vue'
+import { HomeFilled, Bell, Document, TrendCharts, Avatar } from '@element-plus/icons-vue'
 import CustomerService from '@/components/CustomerService.vue'
 
 // 当前用户信息
@@ -101,6 +97,18 @@ const handleLogout = () => {
   position: relative;
 }
 
+/* 顶部黑色阴影 */
+.top-shadow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 140px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.5),transparent);
+  z-index: 9;
+  pointer-events: none;
+}
+
 /* 品牌展示区域 */
 .brand-area {
   position: absolute;
@@ -131,32 +139,42 @@ const handleLogout = () => {
   top: 20px;
   right: 20px;
   z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .user-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   color: #fff;
-  cursor: pointer;
-  padding: 12px 24px;
-  border-radius: 16px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  background: rgba(255, 255, 255, 0.15);
+  padding: 10px 20px;
+  border-radius: 25px;
+  background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.user-icon {
+  font-size: 24px;
+}
+
+.user-text {
+  font-size: 18px;
   font-weight: 500;
-  font-size: 28px;
 }
 
-.user-info:hover {
-  background: rgba(255, 255, 255, 0.25);
-  transform: scale(1.02);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+.logout-link {
+  text-align: right;
+  font-size: 19px;
+  color: #ff4d4d;
+  cursor: pointer;
+  margin-top: 4px;
+  width: 100%;
 }
 
-.user-info .el-icon {
-  font-size: 28px;
+.logout-link:hover {
+  color: #ff1a1a;
 }
 
 .nav-content {
@@ -231,37 +249,37 @@ const handleLogout = () => {
 
 /* Dashboard - 绿色 */
 .dashboard {
-  background: linear-gradient(135deg, #67C23A 0%, #5aaf2e 100%);
+  background: linear-gradient(135deg, #6ba83a 0%, #5a9430 100%);
 }
 
 .dashboard:hover {
-  background: linear-gradient(135deg, #5aaf2e 0%, #4d9a28 100%);
+  background: linear-gradient(135deg, #5a9430 0%, #4d8529 100%);
 }
 
 /* AlarmConfig - 橙黄色 */
 .alarm {
-  background: linear-gradient(135deg, #E6A23C 0%, #d4940c 100%);
+  background: linear-gradient(135deg, #dba81a 0%, #cf9a14 100%);
 }
 
 .alarm:hover {
-  background: linear-gradient(135deg, #d4940c 0%, #c0850a 100%);
+  background: linear-gradient(135deg, #cf9a14 0%, #b8890d 100%);
 }
 
 /* BatchReportConfig - 蓝色 */
 .batch {
-  background: linear-gradient(135deg, #409EFF 0%, #3084e6 100%);
+  background: linear-gradient(135deg, #4a8ac5 0%, #3a7ab5 100%);
 }
 
 .batch:hover {
-  background: linear-gradient(135deg, #3084e6 0%, #2878cf 100%);
+  background: linear-gradient(135deg, #3a7ab5 0%, #2d6599 100%);
 }
 
 /* CurveGroup - 紫色 */
 .curve {
-  background: linear-gradient(135deg, #8e44ad 0%, #7d3c98 100%);
+  background: linear-gradient(135deg, #8e5aad 0%, #7d4a9e 100%);
 }
 
 .curve:hover {
-  background: linear-gradient(135deg, #7d3c98 0%, #6c3587 100%);
+  background: linear-gradient(135deg, #7d4a9e 0%, #6d3d8d 100%);
 }
 </style>

@@ -42,4 +42,10 @@ public interface AlarmConfigService extends IService<AlarmConfig> {
      * @return 设备状态统计，包含停机数量和总数
      */
     Map<String, Integer> getDeviceStatusCount();
+
+    /**
+     * 获取每种报警性质的数量统计
+     * @return 每种报警性质及其数量
+     */
+    List<Map<String, Object>> getResponseReqStats();
 }

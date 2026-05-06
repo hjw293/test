@@ -129,4 +129,36 @@ public class AlarmConfigServiceImpl extends ServiceImpl<AlarmConfigMapper, Alarm
 
         return result;
     }
-}
+
+    /**
+     * 获取每种报警性质的数量统计
+     */
+    @Override
+    public List<Map<String, Object>> getResponseReqStats() {
+        LambdaQueryWrapper<AlarmConfig> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(AlarmConfig::getLanguageName, "中文");
+        queryWrapper.select(AlarmConfig::getResponseReq);
+        queryWrapper.isNotNull(AlarmConfig::getResponseReq);
+        queryWrapper.groupBy(AlarmConfig::getResponseReq);
+
+        List<AlarmConfig> list = this.list(queryWrapper);
+
+        return list.stream()
+                .filter(config -> config.getResponseReq() != null && !config.getResponseReq().trim().isEmpty())
+                .map(config -> {
+                    String responseReq = config.getResponseReq();
+                    // 统计该报警性质的数量
+                    LambdaQueryWrapper<AlarmConfig> countWrapper = new LambdaQueryWrapper<>();
+                    countWrapper.eq(AlarmConfig::getLanguageName, "中文");
+                    countWrapper.eq(AlarmConfig::getResponseReq, responseReq);
+                    long count = this.count(countWrapper);
+
+                    Map<String, Object> item = new HashMap<>();
+                    item.put("type", responseReq);
+                    item.put("count", (int) count);
+                    return item;
+                })
+                .collect(Collectors.toList());
+    }
+
+    }
