@@ -45,12 +45,19 @@ public class CurveDataController {
 
     /**
      * 根据多个曲线名称ID获取数据
-     * GET /api/curve-data/by-name-ids?nameIds=1,2,3
+     * GET /api/curve-data/by-name-ids?nameIds=1,2,3&month=2025-12
      */
     @GetMapping("/by-name-ids")
-    public ResponseEntity<Map<String, Object>> getByNameIds(@RequestParam List<String> nameIds) {
+    public ResponseEntity<Map<String, Object>> getByNameIds(
+            @RequestParam List<String> nameIds,
+            @RequestParam(required = false) String month) {
         try {
-            List<CurveData> data = curveDataService.getByNameIds(nameIds);
+            List<CurveData> data;
+            if (month != null && !month.isEmpty()) {
+                data = curveDataService.getByNameIdsAndMonth(nameIds, month);
+            } else {
+                data = curveDataService.getByNameIds(nameIds);
+            }
 
             Map<String, Object> response = new HashMap<>();
             response.put("code", 200);
@@ -62,6 +69,29 @@ public class CurveDataController {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("code", 500);
             errorResponse.put("message", "获取曲线数据失败: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+
+    /**
+     * 获取所有月份列表
+     * GET /api/curve-data/months
+     */
+    @GetMapping("/months")
+    public ResponseEntity<Map<String, Object>> getDistinctMonths() {
+        try {
+            List<String> months = curveDataService.getDistinctMonths();
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 200);
+            response.put("message", "Success");
+            response.put("data", months);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("code", 500);
+            errorResponse.put("message", "获取月份列表失败: " + e.getMessage());
             return ResponseEntity.status(500).body(errorResponse);
         }
     }

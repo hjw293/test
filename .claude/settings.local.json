@@ -45,7 +45,8 @@
       "Bash(curl -s \"http://localhost:8080/api/curve-group/by-group?groupNameId=327682001\")",
       "Bash(curl -s \"http://localhost:8080/api/curve-data/by-name-ids?nameIds=1573105\")",
       "Bash(sqlite3 \"d:/Study/test/rag_service/chroma_db/chroma.sqlite3\" \"SELECT * FROM curve_data WHERE name_id = 1573105 LIMIT 5;\")",
-      "Bash(curl -s \"http://localhost:8080/api/curve-data/by-name-ids?nameIds=1573105\" -H \"Authorization: Bearer test\")"
+      "Bash(curl -s \"http://localhost:8080/api/curve-data/by-name-ids?nameIds=1573105\" -H \"Authorization: Bearer test\")",
+      "Bash(npm run *)"
     ]
   }
 }

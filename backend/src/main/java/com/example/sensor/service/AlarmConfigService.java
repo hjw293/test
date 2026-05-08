@@ -23,7 +23,7 @@ public interface AlarmConfigService extends IService<AlarmConfig> {
      * @return 分页结果
      */
     IPage<AlarmConfig> getAlarmConfigPage(int pageNum, int pageSize, String alarmKey,
-                                           String responseReq, String machineAction);
+                                           String responseReq, String machineAction, List<Integer> alarmKeys);
 
     /**
      * 获取所有不重复的报警性质

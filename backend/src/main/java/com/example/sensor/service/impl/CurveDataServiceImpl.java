@@ -1,5 +1,6 @@
 package com.example.sensor.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.sensor.entity.CurveData;
 import com.example.sensor.mapper.CurveDataMapper;
@@ -30,5 +31,22 @@ public class CurveDataServiceImpl extends ServiceImpl<CurveDataMapper, CurveData
             result.addAll(baseMapper.getByNameId(nameId));
         }
         return result;
+    }
+
+    @Override
+    public List<String> getDistinctMonths() {
+        return baseMapper.getDistinctMonths();
+    }
+
+    @Override
+    public List<CurveData> getByNameIdsAndMonth(List<String> nameIds, String month) {
+        if (nameIds == null || nameIds.isEmpty() || month == null || month.isEmpty()) {
+            return new ArrayList<>();
+        }
+        LambdaQueryWrapper<CurveData> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.in(CurveData::getNameId, nameIds);
+        queryWrapper.eq(CurveData::getMonth, month);
+        queryWrapper.orderByAsc(CurveData::getTimestamp);
+        return this.list(queryWrapper);
     }
 }

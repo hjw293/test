@@ -1,7 +1,7 @@
 <template>
   <div class="container">
     <el-header class="header">
-      <h1>警报配置管理系统</h1>
+      <h1>报警管理系统</h1>
       <div class="header-right">
         <el-button type="default" @click="goBack" class="back-btn">
           <el-icon><ArrowLeft /></el-icon>
@@ -61,6 +61,13 @@
                   :value="item"
                 />
               </el-select>
+
+              <el-checkbox
+                v-model="filterHasAlarm"
+                label="仅显示有报警"
+                style="margin-right: 10px;"
+                @change="handleSearch"
+              />
 
               <el-input
                 v-model="searchAlarmKey"
@@ -125,6 +132,11 @@
                 <div class="alarm-info-row">
                   <span class="info-label">处理方式:</span>
                   <span class="info-value">{{ alarm.machineAction }}</span>
+                </div>
+
+                <div class="alarm-info-row">
+                  <span class="info-label">报警条数:</span>
+                  <span class="info-value alarm-count">{{ alarm.alarmCount || 0 }} 条</span>
                 </div>
               </div>
             </el-card>
@@ -195,6 +207,22 @@
                   </div>
                 </div>
               </div>
+
+              <!-- 报警日志列表 -->
+              <div class="log-section" v-if="alarmLogs.length > 0">
+                <div class="section-title">
+                  <el-icon><Clock /></el-icon>
+                  报警记录 ({{ alarmLogs.length }})
+                </div>
+                <div class="log-table">
+                  <el-table :data="alarmLogs" border stripe max-height="300">
+                    <el-table-column prop="time" label="报警时间" width="160" />
+                    <el-table-column prop="event" label="事件类型" />
+                    <el-table-column prop="conType" label="连接类型" />
+                  </el-table>
+                </div>
+              </div>
+              <el-empty v-else-if="alarmLogs.length === 0" description="暂无报警记录" />
             </div>
           </el-dialog>
 
@@ -221,7 +249,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
-import { ArrowLeft, User, ArrowDown, Search, Warning, Document, InfoFilled, Setting } from '@element-plus/icons-vue'
+import { ArrowLeft, User, ArrowDown, Search, Warning, Document, InfoFilled, Setting, Clock } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
@@ -246,12 +274,14 @@ const searchAlarmKey = ref('')
 // 筛选状态
 const filterResponseReq = ref('')
 const filterMachineAction = ref('')
+const filterHasAlarm = ref(false)
 const responseReqOptions = ref([])
 const machineActionOptions = ref([])
 
 // 对话框状态
 const dialogVisible = ref(false)
 const selectedAlarm = ref(null)
+const alarmLogs = ref([])
 
 // 获取警报配置数据
 const fetchAlarmData = async () => {
@@ -276,6 +306,10 @@ const fetchAlarmData = async () => {
 
     if (filterMachineAction.value) {
       params.machineAction = filterMachineAction.value
+    }
+
+    if (filterHasAlarm.value) {
+      params.hasAlarm = true
     }
 
     const response = await axios.get(API_URL, {
@@ -367,9 +401,23 @@ const handleSearch = () => {
 }
 
 // 显示警报详情（放大效果）
-const showAlarmDetail = (alarm) => {
+const showAlarmDetail = async (alarm) => {
   selectedAlarm.value = alarm
   dialogVisible.value = true
+
+  // 获取该报警的日志列表
+  try {
+    const token = localStorage.getItem('token')
+    const response = await axios.get(`http://localhost:8080/api/alarm/logs/${alarm.alarmKey}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    if (response.data.code === 200) {
+      alarmLogs.value = response.data.data
+    }
+  } catch (error) {
+    console.error('获取报警日志失败:', error)
+    alarmLogs.value = []
+  }
 }
 
 // 颜色处理函数
@@ -626,6 +674,11 @@ onMounted(() => {
   font-weight: 500;
 }
 
+.alarm-count {
+  font-weight: 600;
+  color: #f56c6c;
+}
+
 .pagination-container {
   display: flex;
   justify-content: center;
@@ -848,5 +901,22 @@ onMounted(() => {
 .alarm-text {
   font-weight: 600;
   font-size: 18px;
+}
+
+.log-section {
+  margin-top: 20px;
+  padding: 16px;
+  background: #f5f7fa;
+  border-radius: 12px;
+}
+
+.log-section .section-title {
+  margin-bottom: 12px;
+}
+
+.log-table {
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
 }
 </style>

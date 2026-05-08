@@ -29,9 +29,9 @@ public class AlarmConfigServiceImpl extends ServiceImpl<AlarmConfigMapper, Alarm
      */
     @Override
     public IPage<AlarmConfig> getAlarmConfigPage(int pageNum, int pageSize, String alarmKey,
-                                                   String responseReq, String machineAction) {
-        logger.debug("查询警报配置，页码: {}, 每页数量: {}, 警报ID: {}, 报警性质: {}, 处理方式: {}",
-                pageNum, pageSize, alarmKey, responseReq, machineAction);
+                                                   String responseReq, String machineAction, List<Integer> alarmKeys) {
+        logger.debug("查询警报配置，页码: {}, 每页数量: {}, 警报ID: {}, 报警性质: {}, 处理方式: {}, 有报警的alarmKey: {}",
+                pageNum, pageSize, alarmKey, responseReq, machineAction, alarmKeys);
 
         // 创建分页对象
         Page<AlarmConfig> page = new Page<>(pageNum, pageSize);
@@ -55,6 +55,13 @@ public class AlarmConfigServiceImpl extends ServiceImpl<AlarmConfigMapper, Alarm
         // 如果提供了 machineAction（处理方式），则添加查询条件
         if (machineAction != null && !machineAction.trim().isEmpty()) {
             queryWrapper.eq(AlarmConfig::getMachineAction, machineAction);
+        }
+
+        // 如果提供了有报警的 alarmKey 列表，则筛选这些记录
+        if (alarmKeys != null && !alarmKeys.isEmpty()) {
+            logger.info("使用IN子句筛选alarmKey: {}", alarmKeys);
+            // 使用 apply 方法直接写 SQL IN 条件，alarmKey 在实体中是 String 类型
+            queryWrapper.in(AlarmConfig::getAlarmKey, alarmKeys.stream().map(String::valueOf).collect(Collectors.toList()));
         }
 
         // 按 alarmKey 排序

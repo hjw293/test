@@ -5,14 +5,16 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.sensor.entity.LogCurveGroup;
+import com.example.sensor.entity.CurveData;
 import com.example.sensor.mapper.LogCurveGroupMapper;
 import com.example.sensor.service.LogCurveGroupService;
+import com.example.sensor.service.CurveDataService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -22,6 +24,9 @@ import java.util.stream.Collectors;
 public class LogCurveGroupServiceImpl extends ServiceImpl<LogCurveGroupMapper, LogCurveGroup> implements LogCurveGroupService {
 
     private static final Logger logger = LoggerFactory.getLogger(LogCurveGroupServiceImpl.class);
+
+    @Autowired
+    private CurveDataService curveDataService;
 
     @Override
     public IPage<LogCurveGroup> getLogCurveGroupPage(int pageNum, int pageSize,
@@ -80,5 +85,53 @@ public class LogCurveGroupServiceImpl extends ServiceImpl<LogCurveGroupMapper, L
         queryWrapper.orderByAsc(LogCurveGroup::getGroupNameId, LogCurveGroup::getId);
         return this.list(queryWrapper).stream()
                 .collect(Collectors.groupingBy(LogCurveGroup::getGroupNameId));
+    }
+
+    @Override
+    public Map<Integer, List<LogCurveGroup>> getGroupedByMonth(String month) {
+        logger.info("getGroupedByMonth called with month: {}", month);
+        if (month == null || month.isEmpty()) {
+            logger.info("month is empty, calling getAllGrouped");
+            return getAllGrouped();
+        }
+        // 获取该月份有数据的曲线名称ID
+        List<String> months = curveDataService.getDistinctMonths();
+        logger.info("distinct months from DB: {}", months);
+        if (!months.contains(month)) {
+            logger.info("month {} not in months list", month);
+            return new HashMap<>();
+        }
+        // 获取所有曲线配置
+        List<LogCurveGroup> allCurves = this.list();
+        logger.info("total curves: {}", allCurves.size());
+        if (allCurves.isEmpty()) {
+            return new HashMap<>();
+        }
+        // 获取该月份所有曲线名称ID
+        List<String> allNameIds = allCurves.stream()
+                .map(c -> String.valueOf(c.getCurveNameId()))
+                .distinct()
+                .collect(Collectors.toList());
+        logger.info("distinct nameIds count: {}", allNameIds.size());
+        // 查询该月份有数据的曲线
+        List<CurveData> monthData = curveDataService.getByNameIdsAndMonth(allNameIds, month);
+        logger.info("monthData size: {}", monthData != null ? monthData.size() : "null");
+        if (monthData == null || monthData.isEmpty()) {
+            return new HashMap<>();
+        }
+        Set<String> nameIdsWithData = new HashSet<>();
+        for (CurveData cd : monthData) {
+            nameIdsWithData.add(cd.getNameId());
+        }
+        logger.info("nameIdsWithData count: {}", nameIdsWithData.size());
+        // 筛选有数据的曲线
+        Map<Integer, List<LogCurveGroup>> result = new LinkedHashMap<>();
+        for (LogCurveGroup curve : allCurves) {
+            if (nameIdsWithData.contains(String.valueOf(curve.getCurveNameId()))) {
+                result.computeIfAbsent(curve.getGroupNameId(), k -> new ArrayList<>()).add(curve);
+            }
+        }
+        logger.info("result grouped by groupNameId: {}", result.keySet());
+        return result;
     }
 }

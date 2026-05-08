@@ -20,4 +20,11 @@ public interface CurveDataMapper extends BaseMapper<CurveData> {
      */
     @Select("SELECT * FROM curve_data WHERE name_id = #{nameId} ORDER BY timestamp ASC")
     List<CurveData> getByNameId(String nameId);
+
+    /**
+     * 获取所有不重复的月份
+     * @return 月份列表
+     */
+    @Select("SELECT DISTINCT month FROM curve_data WHERE month IS NOT NULL ORDER BY month DESC")
+    List<String> getDistinctMonths();
 }

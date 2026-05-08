@@ -2,13 +2,16 @@ package com.example.sensor.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.example.sensor.entity.AlarmConfig;
+import com.example.sensor.entity.AlarmLog;
 import com.example.sensor.service.AlarmConfigService;
+import com.example.sensor.service.AlarmLogService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +28,9 @@ public class AlarmConfigController {
 
     @Autowired
     private AlarmConfigService alarmConfigService;
+
+    @Autowired
+    private AlarmLogService alarmLogService;
 
     /**
      * 获取所有不重复的报警性质和处理方式选项
@@ -70,19 +76,68 @@ public class AlarmConfigController {
             @RequestParam(defaultValue = "12") int pageSize,
             @RequestParam(required = false) String alarmKey,
             @RequestParam(required = false) String responseReq,
-            @RequestParam(required = false) String machineAction) {
+            @RequestParam(required = false) String machineAction,
+            @RequestParam(required = false, defaultValue = "false") boolean hasAlarm) {
 
-        logger.info("请求警报配置数据，页码: {}, 每页数量: {}, 警报ID: {}, 报警性质: {}, 处理方式: {}",
-                pageNum, pageSize, alarmKey, responseReq, machineAction);
+        logger.info("请求警报配置数据，页码: {}, 每页数量: {}, 警报ID: {}, 报警性质: {}, 处理方式: {}, 仅显示有报警: {}",
+                pageNum, pageSize, alarmKey, responseReq, machineAction, hasAlarm);
 
         try {
+            // 获取报警条数映射
+            Map<String, Integer> alarmCountMap = alarmLogService.getAlarmCountMap();
+            logger.info("报警条数映射: {}", alarmCountMap);
+
+            // 如果 hasAlarm 为 true，获取有报警的 alarmKey 列表
+            List<Integer> alarmKeysWithCount = null;
+            if (hasAlarm) {
+                alarmKeysWithCount = alarmCountMap.entrySet().stream()
+                        .filter(entry -> entry.getValue() > 0)
+                        .map(entry -> Integer.parseInt(entry.getKey()))
+                        .collect(Collectors.toList());
+                logger.info("有报警的alarmKey列表: {}", alarmKeysWithCount);
+                // 如果没有有报警的记录，直接返回空
+                if (alarmKeysWithCount.isEmpty()) {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("code", 200);
+                    response.put("message", "Success");
+                    response.put("data", new ArrayList<>());
+                    response.put("pagination", new HashMap<String, Object>() {{
+                        put("total", 0);
+                        put("pageNum", pageNum);
+                        put("pageSize", pageSize);
+                        put("totalPages", 0);
+                    }});
+                    return ResponseEntity.ok(response);
+                }
+            }
+
             IPage<AlarmConfig> pageData = alarmConfigService.getAlarmConfigPage(
-                    pageNum, pageSize, alarmKey, responseReq, machineAction);
+                    pageNum, pageSize, alarmKey, responseReq, machineAction, alarmKeysWithCount);
+            logger.info("查询结果总数: {}", pageData.getRecords().size());
+
+            // 为每条配置添加报警条数
+            List<Map<String, Object>> dataWithCount = pageData.getRecords().stream().map(config -> {
+                Map<String, Object> map = new HashMap<>();
+                // 确保 alarmKey 转为 String 进行匹配
+                String alarmKeyStr = String.valueOf(config.getAlarmKey());
+                int alarmCount = alarmCountMap.getOrDefault(alarmKeyStr, 0);
+                map.put("id", config.getId());
+                map.put("alarmKey", alarmKeyStr);
+                map.put("alarmText", config.getAlarmText() != null ? config.getAlarmText() : "");
+                map.put("textColor", config.getTextColor());
+                map.put("bgColor", config.getBgColor());
+                map.put("responseReq", config.getResponseReq());
+                map.put("machineAction", config.getMachineAction());
+                map.put("languageName", config.getLanguageName());
+                map.put("alarmLevel", null);
+                map.put("alarmCount", alarmCount);
+                return map;
+            }).collect(Collectors.toList());
 
             Map<String, Object> response = new HashMap<>();
             response.put("code", 200);
             response.put("message", "Success");
-            response.put("data", pageData.getRecords());
+            response.put("data", dataWithCount);
             response.put("pagination", new HashMap<String, Object>() {{
                 put("total", pageData.getTotal());
                 put("pageNum", pageData.getCurrent());
@@ -165,8 +220,29 @@ public class AlarmConfigController {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("code", 500);
             errorResponse.put("message", "获取报警性质统计失败: " + e.getMessage());
-            return ResponseEntity.status(500).body(errorResponse);
+return ResponseEntity.status(500).body(errorResponse);
         }
     }
 
+    /**
+     * 根据报警ID获取报警日志列表
+     * GET /api/alarm/logs/{alarmId}
+     */
+    @GetMapping("/logs/{alarmId}")
+    public ResponseEntity<Map<String, Object>> getAlarmLogs(@PathVariable Integer alarmId) {
+        try {
+            List<AlarmLog> logs = alarmLogService.getByAlarmId(alarmId);
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 200);
+            response.put("message", "Success");
+            response.put("data", logs);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("获取报警日志列表失败", e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("code", 500);
+            errorResponse.put("message", "获取报警日志列表失败: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
     }
+}

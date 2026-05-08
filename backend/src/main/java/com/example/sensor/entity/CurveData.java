@@ -33,6 +33,7 @@ public class CurveData implements Serializable {
     private String nameId;
 
     /** 曲线名称 */
+    @TableField(exist = false)
     private String name;
 
     /** 时间戳 */
@@ -41,6 +42,9 @@ public class CurveData implements Serializable {
     /** 实时时间 */
     @TableField("real_time")
     private LocalDateTime realTime;
+
+    /** 月份 (格式: yyyy-MM) */
+    private String month;
 
     /** 数值 */
     private Double value;
