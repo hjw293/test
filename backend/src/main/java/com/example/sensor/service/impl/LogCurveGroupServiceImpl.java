@@ -134,4 +134,45 @@ public class LogCurveGroupServiceImpl extends ServiceImpl<LogCurveGroupMapper, L
         logger.info("result grouped by groupNameId: {}", result.keySet());
         return result;
     }
+
+    @Override
+    public Map<Integer, List<LogCurveGroup>> getGroupedByMonthAndDate(String month, String date) {
+        logger.info("getGroupedByMonthAndDate called with month: {}, date: {}", month, date);
+        if (month == null || month.isEmpty() || date == null || date.isEmpty()) {
+            return getAllGrouped();
+        }
+        // 获取该月份该日期有数据的曲线名称ID
+        List<String> months = curveDataService.getDistinctMonths();
+        if (!months.contains(month)) {
+            return new HashMap<>();
+        }
+        // 获取所有曲线配置
+        List<LogCurveGroup> allCurves = this.list();
+        if (allCurves.isEmpty()) {
+            return new HashMap<>();
+        }
+        // 获取该月份该日期所有曲线名称ID
+        List<String> allNameIds = allCurves.stream()
+                .map(c -> String.valueOf(c.getCurveNameId()))
+                .distinct()
+                .collect(Collectors.toList());
+        // 查询该月份该日期有数据的曲线
+        List<CurveData> dateData = curveDataService.getByNameIdsAndDate(allNameIds, date);
+        if (dateData == null || dateData.isEmpty()) {
+            return new HashMap<>();
+        }
+        Set<String> nameIdsWithData = new HashSet<>();
+        for (CurveData cd : dateData) {
+            nameIdsWithData.add(cd.getNameId());
+        }
+        // 筛选有数据的曲线
+        Map<Integer, List<LogCurveGroup>> result = new LinkedHashMap<>();
+        for (LogCurveGroup curve : allCurves) {
+            if (nameIdsWithData.contains(String.valueOf(curve.getCurveNameId()))) {
+                result.computeIfAbsent(curve.getGroupNameId(), k -> new ArrayList<>()).add(curve);
+            }
+        }
+        logger.info("getGroupedByMonthAndDate result grouped by groupNameId: {}", result.keySet());
+        return result;
+    }
 }

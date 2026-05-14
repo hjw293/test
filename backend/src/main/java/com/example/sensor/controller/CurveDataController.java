@@ -45,15 +45,18 @@ public class CurveDataController {
 
     /**
      * 根据多个曲线名称ID获取数据
-     * GET /api/curve-data/by-name-ids?nameIds=1,2,3&month=2025-12
+     * GET /api/curve-data/by-name-ids?nameIds=1,2,3&month=2025-12&date=02
      */
     @GetMapping("/by-name-ids")
     public ResponseEntity<Map<String, Object>> getByNameIds(
             @RequestParam List<String> nameIds,
-            @RequestParam(required = false) String month) {
+            @RequestParam(required = false) String month,
+            @RequestParam(required = false) String date) {
         try {
             List<CurveData> data;
-            if (month != null && !month.isEmpty()) {
+            if (date != null && !date.isEmpty()) {
+                data = curveDataService.getByNameIdsAndDate(nameIds, date);
+            } else if (month != null && !month.isEmpty()) {
                 data = curveDataService.getByNameIdsAndMonth(nameIds, month);
             } else {
                 data = curveDataService.getByNameIds(nameIds);
@@ -92,6 +95,29 @@ public class CurveDataController {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("code", 500);
             errorResponse.put("message", "获取月份列表失败: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
+        }
+    }
+
+    /**
+     * 根据月份获取日期列表
+     * GET /api/curve-data/dates?month=2026-03
+     */
+    @GetMapping("/dates")
+    public ResponseEntity<Map<String, Object>> getDistinctDatesByMonth(@RequestParam String month) {
+        try {
+            List<String> dates = curveDataService.getDistinctDatesByMonth(month);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 200);
+            response.put("message", "Success");
+            response.put("data", dates);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("code", 500);
+            errorResponse.put("message", "获取日期列表失败: " + e.getMessage());
             return ResponseEntity.status(500).body(errorResponse);
         }
     }

@@ -46,7 +46,29 @@
       "Bash(curl -s \"http://localhost:8080/api/curve-data/by-name-ids?nameIds=1573105\")",
       "Bash(sqlite3 \"d:/Study/test/rag_service/chroma_db/chroma.sqlite3\" \"SELECT * FROM curve_data WHERE name_id = 1573105 LIMIT 5;\")",
       "Bash(curl -s \"http://localhost:8080/api/curve-data/by-name-ids?nameIds=1573105\" -H \"Authorization: Bearer test\")",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Read(//d/Study/frontend/src/**)",
+      "Bash(cd /d/Study/test && grep -n \"getChartTitle\" frontend/src/CurveGroup.vue)",
+      "Read(//d/d/Study/test/frontend/src/**)",
+      "Bash(mysql -u root -p -e \"DESCRIBE batch_info;\")",
+      "Bash(mysql -u root -e \"DESCRIBE batch_info;\")",
+      "Bash(mysql -u root -p123456 -e \"DESCRIBE testdb.batch_info;\")",
+      "Bash(mvn compile *)",
+      "Bash(mysql -u root -p123456 -e \"SELECT DISTINCT date FROM testdb.curve_data WHERE month = '2026-03' AND date IS NOT NULL ORDER BY date DESC LIMIT 5;\")",
+      "Bash(mysql -u root -p123456 -e \"SELECT DISTINCT month FROM testdb.curve_data ORDER BY month DESC LIMIT 5;\")",
+      "Bash(mysql -u root -p123456 -e \"SELECT DISTINCT date FROM testdb.curve_data WHERE month = '2025-12' AND date IS NOT NULL ORDER BY date DESC LIMIT 10;\")",
+      "Bash(mysql -u root -p123456 -e \"SELECT DISTINCT date FROM testdb.curve_data WHERE month = '2026-05' AND date IS NOT NULL ORDER BY date DESC LIMIT 10;\")",
+      "Bash(mysql -u root -p123456 -e \"SELECT DISTINCT name_id, date FROM testdb.curve_data WHERE name_id LIKE '%327682000%' AND date = '02' LIMIT 5;\")",
+      "Bash(mysql -u root -p123456 -e \"SELECT name_id, date, COUNT\\(*\\) as cnt FROM testdb.curve_data WHERE name_id LIKE '%327682%' GROUP BY name_id, date ORDER BY name_id, date DESC LIMIT 10;\")",
+      "Bash(mysql -u root -p123456 -e \"SELECT curve_name_id, curve_color FROM testdb.log_curve_group WHERE group_name_id = 327682000 LIMIT 5;\")",
+      "Bash(mysql -u root -p123456 -e \"SELECT name_id, date, COUNT\\(*\\) as cnt FROM testdb.curve_data WHERE name_id IN \\('1573105','1573107','1573156','1573355','1573195'\\) GROUP BY name_id, date ORDER BY name_id, date DESC LIMIT 20;\")",
+      "Bash(mysql -u root -p123456 -e \"SELECT name_id, date, COUNT\\(*\\) as cnt FROM testdb.curve_data WHERE name_id = '1573105' AND date = '02' GROUP BY name_id, date;\")",
+      "Bash(curl -s \"http://localhost:8080/api/curve-data/by-name-ids?nameIds=1573105&date=02\")",
+      "Bash(mysql -u root -p123456 -e \"SELECT COUNT\\(*\\) FROM testdb.curve_data WHERE name_id = '1573105' AND date = '02';\")",
+      "Bash(mysql -u root -p123456 -e \"SELECT DISTINCT date FROM testdb.curve_data WHERE month = '2025-12' AND date = '02' LIMIT 5;\")",
+      "Bash(mysql -u root -p123456 -N -e \"SELECT token FROM testdb.auth_token WHERE user_id = \\(SELECT id FROM testdb.user WHERE username = 'admin'\\) ORDER BY create_time DESC LIMIT 1\")",
+      "Bash(curl -s \"http://localhost:8080/api/curve-data/by-name-ids?nameIds=1573105&date=02\" -H \"Authorization: Bearer $\\(mysql -u root -p123456 -N -e \"SELECT token FROM testdb.auth_token WHERE user_id = \\(SELECT id FROM testdb.user WHERE username = 'admin'\\) ORDER BY create_time DESC LIMIT 1\" \\)\")",
+      "Bash(mysql -u root -p123456 -e \"SELECT name_id, date, COUNT\\(*\\) as cnt FROM testdb.curve_data WHERE name_id IN \\('1573105','1573107'\\) AND date IN \\('01','02'\\) GROUP BY name_id, date ORDER BY name_id, date;\")"
     ]
   }
 }

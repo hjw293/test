@@ -49,4 +49,12 @@ public interface LogCurveGroupService extends IService<LogCurveGroup> {
      * @return Map<groupNameId, List<LogCurveGroup>>
      */
     Map<Integer, List<LogCurveGroup>> getGroupedByMonth(String month);
+
+    /**
+     * 获取指定月份和日期的数据，按组名称ID分组
+     * @param month 月份 (格式: yyyy-MM)
+     * @param date 日期 (格式: dd)
+     * @return Map<groupNameId, List<LogCurveGroup>>
+     */
+    Map<Integer, List<LogCurveGroup>> getGroupedByMonthAndDate(String month, String date);
 }

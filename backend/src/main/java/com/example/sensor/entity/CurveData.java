@@ -46,6 +46,9 @@ public class CurveData implements Serializable {
     /** 月份 (格式: yyyy-MM) */
     private String month;
 
+    /** 日期 (格式: dd) */
+    private String date;
+
     /** 数值 */
     private Double value;
 }

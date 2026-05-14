@@ -31,10 +31,25 @@ public interface CurveDataService extends IService<CurveData> {
     List<String> getDistinctMonths();
 
     /**
+     * 根据月份获取所有不重复的日期
+     * @param month 月份
+     * @return 日期列表
+     */
+    List<String> getDistinctDatesByMonth(String month);
+
+    /**
      * 根据曲线名称ID列表和月份获取数据
      * @param nameIds 曲线名称ID列表
      * @param month 月份
      * @return 曲线数据列表
      */
     List<CurveData> getByNameIdsAndMonth(List<String> nameIds, String month);
+
+    /**
+     * 根据曲线名称ID列表和日期获取数据
+     * @param nameIds 曲线名称ID列表
+     * @param date 日期
+     * @return 曲线数据列表
+     */
+    List<CurveData> getByNameIdsAndDate(List<String> nameIds, String date);
 }

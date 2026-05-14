@@ -39,6 +39,11 @@ public class CurveDataServiceImpl extends ServiceImpl<CurveDataMapper, CurveData
     }
 
     @Override
+    public List<String> getDistinctDatesByMonth(String month) {
+        return baseMapper.getDistinctDatesByMonth(month);
+    }
+
+    @Override
     public List<CurveData> getByNameIdsAndMonth(List<String> nameIds, String month) {
         if (nameIds == null || nameIds.isEmpty() || month == null || month.isEmpty()) {
             return new ArrayList<>();
@@ -46,6 +51,18 @@ public class CurveDataServiceImpl extends ServiceImpl<CurveDataMapper, CurveData
         LambdaQueryWrapper<CurveData> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.in(CurveData::getNameId, nameIds);
         queryWrapper.eq(CurveData::getMonth, month);
+        queryWrapper.orderByAsc(CurveData::getTimestamp);
+        return this.list(queryWrapper);
+    }
+
+    @Override
+    public List<CurveData> getByNameIdsAndDate(List<String> nameIds, String date) {
+        if (nameIds == null || nameIds.isEmpty() || date == null || date.isEmpty()) {
+            return new ArrayList<>();
+        }
+        LambdaQueryWrapper<CurveData> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.in(CurveData::getNameId, nameIds);
+        queryWrapper.eq(CurveData::getDate, date);
         queryWrapper.orderByAsc(CurveData::getTimestamp);
         return this.list(queryWrapper);
     }

@@ -119,14 +119,17 @@ public class LogCurveGroupController {
 
     /**
      * 获取所有数据，按组分组返回
-     * GET /api/curve-group/all-grouped?month=2025-12
+     * GET /api/curve-group/all-grouped?month=2025-12&date=02
      */
     @GetMapping("/all-grouped")
     public ResponseEntity<Map<String, Object>> getAllGrouped(
-            @RequestParam(required = false) String month) {
+            @RequestParam(required = false) String month,
+            @RequestParam(required = false) String date) {
         try {
             Map<Integer, List<LogCurveGroup>> grouped;
-            if (month != null && !month.isEmpty()) {
+            if (date != null && !date.isEmpty()) {
+                grouped = logCurveGroupService.getGroupedByMonthAndDate(month, date);
+            } else if (month != null && !month.isEmpty()) {
                 grouped = logCurveGroupService.getGroupedByMonth(month);
             } else {
                 grouped = logCurveGroupService.getAllGrouped();

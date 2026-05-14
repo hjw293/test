@@ -31,7 +31,7 @@
               <span>曲线组导航</span>
             </template>
             <div v-loading="groupLoading" class="group-list">
-              <!-- 三级树结构：月份 -> 组别 -> 曲线 -->
+              <!-- 四级树结构：月份 -> 日期 -> 组别 -> 曲线 -->
               <el-collapse v-model="expandedMonths" class="group-collapse" @change="handleMonthExpand">
                 <el-collapse-item
                   v-for="month in monthOptions"
@@ -47,33 +47,53 @@
                       </el-tag>
                     </div>
                   </template>
-                  <!-- 组别列表 -->
-                  <el-collapse v-model="expandedGroups" class="group-collapse inner-collapse" @change="handleGroupExpand">
+                  <!-- 日期列表 -->
+                  <el-collapse v-model="expandedDates" class="group-collapse inner-collapse" @change="handleDateExpand">
                     <el-collapse-item
-                      v-for="gid in getGroupsByMonth(month)"
-                      :key="gid"
-                      :name="gid"
+                      v-for="date in getDatesByMonth(month)"
+                      :key="date"
+                      :name="date"
                     >
                       <template #title>
-                        <div class="group-header" :class="{ active: selectedGroupId === gid && !selectedCurveNameId }">
-                          <span class="group-item-label">组 {{ gid }}</span>
-                          <el-tag size="small" type="info">
-                            {{ getCurveCountByGroup(gid) }} 条
+                        <div class="date-header" :class="{ active: selectedDate === date }">
+                          <span class="date-label">{{ date }}</span>
+                          <el-tag size="small" type="success">
+                            {{ getGroupCountByDate(month, date) }} 组
                           </el-tag>
                         </div>
                       </template>
-                      <div class="curve-list">
-                        <div
-                          v-for="curve in getCurvesByGroup(gid)"
-                          :key="curve.curveNameId"
-                          class="curve-item"
-                          :class="{ active: selectedCurveNameId === curve.curveNameId }"
-                          @click.stop="selectCurve(curve)"
+                      <!-- 组别列表 -->
+                      <el-collapse v-model="expandedGroups" class="group-collapse inner-collapse">
+                        <el-collapse-item
+                          v-for="gid in getGroupsByDate(month, date)"
+                          :key="gid"
+                          :name="gid"
                         >
-                          <span class="color-dot small" :style="{ backgroundColor: curve.curveColor || '#ccc' }"></span>
-                          <span class="curve-name-id">{{ curve.curveNameId }}</span>
-                        </div>
-                      </div>
+                          <template #title>
+                            <div class="group-header" :class="{ active: selectedGroupId === gid && !selectedCurveNameId }" @click.stop="expandAndSelectGroup(gid)">
+                              <span class="group-item-label">组 {{ gid }}</span>
+                              <el-tag size="small" type="info">
+                                {{ getCurveCountByGroup(gid) }} 条
+                              </el-tag>
+                              <el-icon class="expand-icon" :class="{ expanded: selectedGroupId === gid }">
+                                <ArrowRight />
+                              </el-icon>
+                            </div>
+                          </template>
+                          <div v-if="selectedGroupId === gid" class="curve-list">
+                            <div
+                              v-for="curve in getCurvesByGroup(gid)"
+                              :key="curve.curveNameId"
+                              class="curve-item"
+                              :class="{ active: selectedCurveNameId === curve.curveNameId }"
+                              @click.stop="selectCurve(curve)"
+                            >
+                              <span class="color-dot small" :style="{ backgroundColor: curve.curveColor || '#ccc' }"></span>
+                              <span class="curve-name-id" :title="curve.curveNameId">{{ getCurveDisplayName(curve.curveNameId) }}</span>
+                            </div>
+                          </div>
+                        </el-collapse-item>
+                      </el-collapse>
                     </el-collapse-item>
                   </el-collapse>
                 </el-collapse-item>
@@ -88,31 +108,84 @@
           <el-card class="chart-card" shadow="hover">
             <template #header>
               <div class="card-header">
-                <div class="header-title">
-                  {{ getChartTitle() }}
+                <div class="title-tabs">
+                  <span
+                    :class="{ active: activeTab === 'chart' }"
+                    @click="switchTab('chart')"
+                    class="tab-item"
+                  >
+                    曲线展示
+                  </span>
+                  <span
+                    :class="{ active: activeTab === 'compare' }"
+                    @click="switchTab('compare')"
+                    class="tab-item"
+                  >
+                    对比分析
+                  </span>
                 </div>
                 <div class="header-controls" v-if="selectedGroupId">
-                  <el-button v-if="selectedCurveNameId" type="info" @click="clearCurveSelection">
-                    返回全部曲线
-                  </el-button>
                   <el-button type="primary" :loading="chartLoading" @click="refreshCurves">
-                    刷新
+                    {{ chartLoading ? '加载中...' : '刷新' }}
                   </el-button>
                 </div>
               </div>
             </template>
 
             <div v-loading="chartLoading" class="chart-area">
-              <!-- ECharts 图表 -->
-              <div v-if="selectedGroupId && currentCurves.length > 0" class="chart-wrapper">
-                <div ref="chartRef" class="echarts-container"></div>
+              <!-- 曲线展示视图 -->
+              <div v-if="activeTab === 'chart'">
+                <div v-if="selectedGroupId && currentCurves.length > 0" class="chart-wrapper">
+                  <div ref="chartRef" class="echarts-container"></div>
+                </div>
+                <el-empty v-else-if="selectedGroupId && !chartLoading" description="该曲线组暂无数据" />
+                <el-empty v-else-if="!selectedGroupId && !chartLoading" description="请在左侧选择一个曲线组查看曲线">
+                  <template #image>
+                    <div style="font-size: 64px; color: #ddd;">📈</div>
+                  </template>
+                </el-empty>
               </div>
-              <el-empty v-else-if="selectedGroupId && !chartLoading" description="该曲线组暂无数据" />
-              <el-empty v-else-if="!selectedGroupId && !chartLoading" description="请在左侧选择一个曲线组查看曲线">
-                <template #image>
-                  <div style="font-size: 64px; color: #ddd;">📈</div>
-                </template>
-              </el-empty>
+
+              <!-- 对比分析视图 -->
+              <div v-else-if="activeTab === 'compare'" class="compare-container">
+                <div v-if="compareCurves.length === 0" class="compare-empty">
+                  <el-empty description="请在左侧选择要对比的曲线（支持多选）">
+                    <template #image>
+                      <div style="font-size: 64px; color: #ddd;">📊</div>
+                    </template>
+                  </el-empty>
+                </div>
+                <div v-else class="compare-content">
+                  <!-- 已选曲线列表 -->
+                  <div class="compare-devices-header">
+                    <div class="compare-devices-title">已选择曲线 ({{ compareCurves.length }})</div>
+                    <div class="compare-devices-list">
+                      <div
+                        v-for="curve in compareCurves"
+                        :key="curve.curveNameId"
+                        class="compare-device-tag"
+                      >
+                        <span class="device-tag-info">
+                          <span class="device-tag-name" :style="{ color: curve.curveColor }">
+                            <span class="color-dot small" :style="{ backgroundColor: curve.curveColor }"></span>
+                            {{ getCurveDisplayName(curve.curveNameId) }}
+                          </span>
+                          <span class="device-tag-date">ID: {{ curve.curveNameId }}</span>
+                        </span>
+                        <el-button
+                          type="danger"
+                          size="small"
+                          :icon="Close"
+                          circle
+                          @click="removeFromCompare(curve.curveNameId)"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <!-- 对比图表 -->
+                  <div ref="compareChartRef" class="compare-chart"></div>
+                </div>
+              </div>
             </div>
           </el-card>
 
@@ -147,7 +220,13 @@
                   <span class="color-dot table-dot" :style="{ backgroundColor: row.curveColor || '#ccc' }"></span>
                 </template>
               </el-table-column>
-              <el-table-column prop="curveNameId" label="曲线名称ID" width="130" />
+              <el-table-column label="曲线名称" width="180">
+                <template #default="{ row }">
+                  <span>{{ getCurveDisplayName(row.curveNameId) }}</span>
+                  <br>
+                  <span class="text-muted" style="font-size: 11px;">ID: {{ row.curveNameId }}</span>
+                </template>
+              </el-table-column>
               <el-table-column label="曲线类型" width="100">
                 <template #default="{ row }">
                   <el-tag :type="getTypeTagType(row.curveType)" size="small">{{ getTypeText(row.curveType) }}</el-tag>
@@ -158,11 +237,17 @@
                   <el-tag :type="getModeTagType(row.curveMode)" size="small">{{ getModeText(row.curveMode) }}</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column label="最小值" width="90">
-                <template #default="{ row }">{{ row.curveMin ?? '-' }}</template>
+              <el-table-column label="组最小值" width="100">
+                <template #default="{ row }">{{ curveStats.min ?? '-' }}</template>
               </el-table-column>
-              <el-table-column label="最大值" width="90">
-                <template #default="{ row }">{{ row.curveMax ?? '-' }}</template>
+              <el-table-column label="组最大值" width="100">
+                <template #default="{ row }">{{ curveStats.max ?? '-' }}</template>
+              </el-table-column>
+              <el-table-column label="组平均值" width="100">
+                <template #default="{ row }">{{ curveStats.avg ?? '-' }}</template>
+              </el-table-column>
+              <el-table-column label="数据点数" width="90" align="center">
+                <template #default="{ row }">{{ getCurveDataCount(row.curveNameId) }}</template>
               </el-table-column>
               <el-table-column label="引用" width="80" prop="curveRef" />
               <el-table-column label="预估" width="70" align="center">
@@ -187,7 +272,7 @@ import { ref, onMounted, onBeforeUnmount, computed, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
 import axios from 'axios'
-import { ArrowLeft, User, ArrowDown, Calendar } from '@element-plus/icons-vue'
+import { ArrowLeft, User, ArrowDown, Calendar, ArrowRight } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
@@ -201,6 +286,8 @@ const BY_GROUP_API = 'http://localhost:8080/api/curve-group/by-group'
 const ALL_GROUPED_API = 'http://localhost:8080/api/curve-group/all-grouped'
 const CURVE_DATA_API = 'http://localhost:8080/api/curve-data/by-name-ids'
 const MONTHS_API = 'http://localhost:8080/api/curve-data/months'
+const DATES_API = 'http://localhost:8080/api/curve-data/dates'
+const TEXT_NAMES_API = 'http://localhost:8080/api/text-source/names'
 
 // 状态
 const groupLoading = ref(false)
@@ -213,15 +300,26 @@ const currentCurves = ref([])
 const curveDataMap = ref({})  // 曲线数据 Map<nameId, CurveData[]>
 const expandedGroups = ref([])  // 展开的组
 const expandedMonths = ref([])  // 展开的月份
+const expandedDates = ref([])  // 展开的日期
 const groupedCurves = ref({})  // 按组分组的曲线 Map<groupId, Curve[]>
 const selectedMonth = ref(null)  // 选中的月份
+const selectedDate = ref(null)  // 选中的日期
 const monthOptions = ref([])  // 月份选项
+const dateOptions = ref({})  // 按月份存储的日期选项 Map<month, dates[]>
 // 按月份分组的曲线数据 Map<month, Map<groupId, Curve[]>>
 const monthGroupedCurves = ref({})
+// 曲线名称映射 Map<nameId, 中文名>
+const nameMap = ref({})
+// 曲线对比列表
+const compareCurves = ref([])
+// 当前视图标签：chart | compare
+const activeTab = ref('chart')
 
 // 图表
 const chartRef = ref(null)
+const compareChartRef = ref(null)
 let chart = null
+let compareChart = null
 
 // 组元信息
 const groupMeta = computed(() => {
@@ -233,6 +331,32 @@ const groupMeta = computed(() => {
     enableNid: first.groupEnableNid,
     enableValue: first.groupEnableValue,
     nameType: first.groupNameType
+  }
+})
+
+// 曲线组统计数据（基于所有曲线数据计算）
+const curveStats = computed(() => {
+  const values = []
+  // 遍历所有曲线的数据
+  for (const [nameId, dataList] of Object.entries(curveDataMap.value)) {
+    if (dataList && dataList.length > 0) {
+      for (const item of dataList) {
+        if (item.value != null) {
+          values.push(item.value)
+        }
+      }
+    }
+  }
+  if (values.length === 0) {
+    return { min: null, max: null, avg: null }
+  }
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const avg = values.reduce((a, b) => a + b, 0) / values.length
+  return {
+    min: Math.round(min * 100) / 100,
+    max: Math.round(max * 100) / 100,
+    avg: Math.round(avg * 100) / 100
   }
 })
 
@@ -253,12 +377,13 @@ const fetchMonths = async () => {
     if (response.data.code === 200) {
       monthOptions.value = response.data.data || []
       console.log('月份列表:', monthOptions.value)
-      // 默认展开第一个月份
+      // 默认展开第一个月份，但不要加载数据（图表区域保持空白）
       if (monthOptions.value.length > 0) {
         const firstMonth = monthOptions.value[0]
         expandedMonths.value = [firstMonth]
         selectedMonth.value = firstMonth
-        await fetchDataByMonth(firstMonth)
+        await fetchDatesByMonth(firstMonth)
+        // 不再自动调用 fetchDataByMonth，图表区域保持空白
       }
     }
   } catch (error) {
@@ -266,13 +391,34 @@ const fetchMonths = async () => {
   }
 }
 
-// 根据月份获取数据
-const fetchDataByMonth = async (month) => {
+// 根据月份获取日期列表
+const fetchDatesByMonth = async (month) => {
+  if (!month) return
+  try {
+    const response = await axios.get(DATES_API, {
+      params: { month },
+      headers: getAuthHeaders()
+    })
+    if (response.data.code === 200) {
+      dateOptions.value[month] = response.data.data || []
+      console.log('月份', month, '的日期列表:', dateOptions.value[month])
+    }
+  } catch (error) {
+    console.error('获取日期列表失败:', error)
+  }
+}
+
+// 根据月份获取数据（可选日期过滤）
+const fetchDataByMonth = async (month, date = null) => {
   if (!month) return
   groupLoading.value = true
   try {
+    const params = { month }
+    if (date) {
+      params.date = date
+    }
     const response = await axios.get(ALL_GROUPED_API, {
-      params: { month },
+      params,
       headers: getAuthHeaders()
     })
     if (response.data.code === 200) {
@@ -284,18 +430,43 @@ const fetchDataByMonth = async (month) => {
         [month]: data
       }
       console.log('月份', month, '的组数据:', data)
-      // 自动选中第一个组
-      const groupIds = Object.keys(data)
-      if (groupIds.length > 0 && !selectedGroupId.value) {
-        const firstGroup = parseInt(groupIds[0])
-        expandedGroups.value = [firstGroup]
-        selectGroup(firstGroup)
-      }
+      // 获取曲线名称映射
+      await fetchCurveNames()
+      // 不再自动选中组，保持空白状态等待用户选择
     }
   } catch (error) {
     console.error('获取分组数据失败:', error)
   } finally {
     groupLoading.value = false
+  }
+}
+
+// 获取所有曲线的名称映射
+const fetchCurveNames = async () => {
+  try {
+    // 收集所有 nameIds
+    const allNameIds = []
+    for (const [month, groups] of Object.entries(monthGroupedCurves.value)) {
+      for (const [gid, curves] of Object.entries(groups)) {
+        for (const curve of curves) {
+          if (curve.curveNameId && !allNameIds.includes(curve.curveNameId)) {
+            allNameIds.push(curve.curveNameId)
+          }
+        }
+      }
+    }
+    if (allNameIds.length === 0) return
+
+    const response = await axios.get(TEXT_NAMES_API, {
+      params: { nameIds: allNameIds.join(',') },
+      headers: getAuthHeaders()
+    })
+    if (response.data.code === 200) {
+      nameMap.value = response.data.data || {}
+      console.log('曲线名称映射:', nameMap.value)
+    }
+  } catch (error) {
+    console.error('获取曲线名称失败:', error)
   }
 }
 
@@ -305,12 +476,53 @@ const handleMonthExpand = async (expanded) => {
     const latestMonth = expanded[expanded.length - 1]
     if (latestMonth !== selectedMonth.value) {
       selectedMonth.value = latestMonth
+      selectedDate.value = null
       selectedGroupId.value = null
       selectedCurveNameId.value = null
       expandedGroups.value = []
+      expandedDates.value = []
+      // 获取该月份的日期列表
+      if (!dateOptions.value[latestMonth]) {
+        await fetchDatesByMonth(latestMonth)
+      }
       await fetchDataByMonth(latestMonth)
     }
   }
+}
+
+// 处理日期展开变化
+const handleDateExpand = async (expanded) => {
+  if (expanded.length > 0) {
+    const latestDate = expanded[expanded.length - 1]
+    if (latestDate !== selectedDate.value) {
+      selectedDate.value = latestDate
+      selectedGroupId.value = null
+      selectedCurveNameId.value = null
+      expandedGroups.value = []
+      // 清空曲线数据缓存
+      curveDataMap.value = {}
+      // 清空月份分组数据缓存，强制重新获取
+      monthGroupedCurves.value = {}
+      // 重新加载组数据（不带日期参数，树形显示所有组）
+      if (selectedMonth.value) {
+        await fetchDataByMonth(selectedMonth.value)
+        // 等待数据加载后，默认展开第一个有数据的组
+        await nextTick()
+        const groups = getGroupsByDate(selectedMonth.value)
+        if (groups.length > 0) {
+          expandedGroups.value = [groups[0]]
+          selectGroup(groups[0])
+        }
+      }
+    }
+  }
+}
+
+// 点击选择某个组（展开该组并选中）
+const expandAndSelectGroup = (gid) => {
+  // 只展开选中的组，折叠其他组
+  expandedGroups.value = [gid]
+  selectGroup(gid)
 }
 
 // 加载指定组的曲线
@@ -332,6 +544,8 @@ const loadGroupCurves = async (groupNameId) => {
         await fetchCurveDataByNameIds(nameIds)
       }
 
+      // 等待数据加载完成后再渲染图表
+      await nextTick()
       renderChart()
     }
   } catch (error) {
@@ -382,6 +596,23 @@ const getGroupsByMonth = (month) => {
   return Object.keys(monthGroupedCurves.value[month]).map(g => parseInt(g))
 }
 
+// 获取某月份下的所有日期
+const getDatesByMonth = (month) => {
+  return dateOptions.value[month] || []
+}
+
+// 获取某月份某日期下的所有组ID
+const getGroupsByDate = (month, date) => {
+  if (!monthGroupedCurves.value[month]) return []
+  return Object.keys(monthGroupedCurves.value[month]).map(g => parseInt(g))
+}
+
+// 获取某月份某日期的组数量
+const getGroupCountByDate = (month, date) => {
+  if (!monthGroupedCurves.value[month]) return 0
+  return Object.keys(monthGroupedCurves.value[month]).length
+}
+
 // 获取某月份的组数量
 const getGroupCountByMonth = (month) => {
   if (!monthGroupedCurves.value[month]) {
@@ -398,11 +629,73 @@ const getCurveCountByGroup = (gid) => {
   return groupedCurves.value[gid]?.length || 0
 }
 
+// 获取曲线的显示名称（优先使用中文名）
+const getCurveDisplayName = (curveNameId) => {
+  if (!curveNameId) return ''
+  return nameMap.value[curveNameId] || String(curveNameId)
+}
+
+// 获取某条曲线的数据点数量
+const getCurveDataCount = (curveNameId) => {
+  if (!curveNameId) return 0
+  const dataList = curveDataMap.value[curveNameId]
+  return dataList ? dataList.length : 0
+}
+
 // 选择曲线
 const selectCurve = (curve) => {
-  selectedCurveNameId.value = curve.curveNameId
-  selectedCurve.value = curve
-  loadSingleCurveData(curve)
+  if (activeTab.value === 'compare') {
+    // 对比模式：添加或移除曲线（再次点击取消选择）
+    const existingIndex = compareCurves.value.findIndex(c => c.curveNameId === curve.curveNameId)
+    if (existingIndex > -1) {
+      compareCurves.value.splice(existingIndex, 1)
+    } else {
+      compareCurves.value.push(curve)
+    }
+    updateCompareChart()
+  } else {
+    // 普通模式：单选曲线
+    selectedCurveNameId.value = curve.curveNameId
+    selectedCurve.value = curve
+    loadSingleCurveData(curve)
+  }
+}
+
+// 切换标签页
+const switchTab = (tab) => {
+  activeTab.value = tab
+  if (tab === 'compare') {
+    // 清空对比相关状态
+    compareCurves.value = []
+    selectedCurveNameId.value = null
+    selectedCurve.value = null
+    currentCurves.value = []
+    // 销毁主图表，避免干扰
+    if (chart) {
+      chart.dispose()
+      chart = null
+    }
+    // 等待 DOM 更新后初始化对比图表
+    nextTick(() => {
+      if (compareChartRef.value && !compareChart) {
+        compareChart = echarts.init(compareChartRef.value)
+      }
+    })
+  } else if (tab === 'chart') {
+    // 销毁对比图表，避免干扰
+    if (compareChart) {
+      compareChart.dispose()
+      compareChart = null
+    }
+    // 切换回曲线展示视图
+    // 如果有已选曲线，重新加载数据
+    if (selectedCurveNameId.value && selectedCurve.value) {
+      loadSingleCurveData(selectedCurve.value)
+    } else if (selectedGroupId.value) {
+      // 否则加载组内所有曲线
+      loadGroupCurves(selectedGroupId.value)
+    }
+  }
 }
 
 // 加载单条曲线数据
@@ -411,7 +704,9 @@ const loadSingleCurveData = async (curve) => {
   try {
     const nameId = curve.curveNameId
     const params = { nameIds: nameId }
-    if (selectedMonth.value) {
+    if (selectedDate.value) {
+      params.date = selectedDate.value
+    } else if (selectedMonth.value) {
       params.month = selectedMonth.value
     }
     const response = await axios.get(CURVE_DATA_API, {
@@ -420,6 +715,8 @@ const loadSingleCurveData = async (curve) => {
     })
     if (response.data.code === 200) {
       const dataList = response.data.data || []
+      // 清空旧数据
+      curveDataMap.value = {}
       const grouped = {}
       dataList.forEach(item => {
         const key = String(item.nameId)
@@ -450,6 +747,161 @@ const clearCurveSelection = () => {
   loadGroupCurves(selectedGroupId.value)
 }
 
+// 清空对比列表
+const clearCompare = () => {
+  compareCurves.value = []
+}
+
+// 从对比列表移除
+const removeFromCompare = (curveNameId) => {
+  const index = compareCurves.value.findIndex(c => c.curveNameId === curveNameId)
+  if (index > -1) {
+    compareCurves.value.splice(index, 1)
+    updateCompareChart()
+  }
+}
+
+// 更新对比图表
+const updateCompareChart = async () => {
+  // 等待 DOM 更新
+  await nextTick()
+
+  if (!compareChartRef.value) return
+
+  // 清空图表
+  if (compareChart) {
+    compareChart.dispose()
+    compareChart = null
+  }
+
+  if (compareCurves.value.length === 0) {
+    return
+  }
+
+  // 获取所有选中曲线的 nameIds
+  const nameIds = compareCurves.value.map(c => c.curveNameId)
+
+  // 获取数据
+  let curveDataTmpMap = {}
+  try {
+    const params = { nameIds: nameIds.join(',') }
+    if (selectedMonth.value) {
+      params.month = selectedMonth.value
+    }
+    const response = await axios.get(CURVE_DATA_API, {
+      params,
+      headers: getAuthHeaders()
+    })
+    if (response.data.code === 200) {
+      const dataList = response.data.data || []
+      dataList.forEach(item => {
+        const key = String(item.nameId)
+        if (!curveDataTmpMap[key]) {
+          curveDataTmpMap[key] = []
+        }
+        curveDataTmpMap[key].push(item)
+      })
+      for (const key in curveDataTmpMap) {
+        curveDataTmpMap[key].sort((a, b) => new Date(a.realTime) - new Date(b.realTime))
+      }
+    }
+  } catch (error) {
+    console.error('获取对比曲线数据失败:', error)
+  }
+
+  // 初始化图表
+  compareChart = echarts.init(compareChartRef.value)
+
+  // 获取背景色
+  const bgColor = groupMeta.value.bgColor || '#ffffff'
+
+  // 构建 series
+  const colors = ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#909399', '#773C1A', '#F7BA2A', '#8e44ad']
+  const series = compareCurves.value.map((curve, index) => {
+    const nameId = String(curve.curveNameId)
+    const dataList = curveDataTmpMap[nameId] || []
+    const data = dataList.map(item => item.value)
+
+    return {
+      name: getCurveDisplayName(curve.curveNameId),
+      type: 'line',
+      data: data,
+      smooth: 0.4,
+      symbol: 'none',
+      lineStyle: {
+        width: 2,
+        color: curve.curveColor || colors[index % colors.length]
+      },
+      itemStyle: {
+        color: curve.curveColor || colors[index % colors.length]
+      },
+      areaStyle: curve.curvePredict === 1 ? null : {
+        opacity: 0.05,
+        color: curve.curveColor || colors[index % colors.length]
+      }
+    }
+  })
+
+  // 获取 X 轴数据（时间标签）
+  let xData = []
+  if (compareCurves.value.length > 0) {
+    const firstNameId = String(compareCurves.value[0].curveNameId)
+    const firstData = curveDataTmpMap[firstNameId] || []
+    xData = firstData.map(item => {
+      if (item.realTime && item.realTime.length > 10) {
+        return item.realTime.substring(11)
+      }
+      return ''
+    })
+  }
+
+  const option = {
+    backgroundColor: bgColor,
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(50, 50, 50, 0.85)',
+      borderColor: '#555',
+      textStyle: { color: '#fff', fontSize: 13 },
+      axisPointer: { type: 'cross', lineStyle: { type: 'dashed' } }
+    },
+    legend: {
+      data: series.map(s => s.name),
+      top: 10,
+      textStyle: {
+        color: bgColor === '#ffffff' || bgColor === '#fff' ? '#333' : '#666'
+      }
+    },
+    grid: {
+      left: '8%',
+      right: '5%',
+      bottom: '12%',
+      top: '15%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: xData,
+      boundaryGap: false,
+      axisLine: { lineStyle: { color: '#ccc' } },
+      axisLabel: {
+        color: '#666',
+        rotate: 0,
+        interval: xData.length > 8 ? Math.floor(xData.length / 8) : 0
+      }
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: { lineStyle: { color: '#666' } },
+      axisLabel: { color: '#666' },
+      splitLine: { lineStyle: { type: 'dashed', color: '#eee' } }
+    },
+    series: series,
+    animation: false
+  }
+
+  compareChart.setOption(option, true)
+}
+
 // 刷新当前曲线
 const refreshCurves = () => {
   if (selectedCurveNameId.value && selectedCurve.value) {
@@ -462,8 +914,9 @@ const refreshCurves = () => {
 // 获取图表标题
 const getChartTitle = () => {
   const monthStr = selectedMonth.value ? ` (${selectedMonth.value})` : ''
-  if (selectedCurveNameId.value) {
-    return `曲线组 ${selectedGroupId.value} - 曲线 ${selectedCurveNameId.value}${monthStr}`
+  if (selectedCurveNameId.value && selectedCurve.value) {
+    const curveName = getCurveDisplayName(selectedCurve.value.curveNameId)
+    return `曲线组 ${selectedGroupId.value} - ${curveName}${monthStr}`
   } else if (selectedGroupId.value) {
     return `曲线组 ${selectedGroupId.value} - 全部曲线${monthStr}`
   }
@@ -474,7 +927,9 @@ const getChartTitle = () => {
 const fetchCurveDataByNameIds = async (nameIds) => {
   try {
     const params = { nameIds: nameIds.join(',') }
-    if (selectedMonth.value) {
+    if (selectedDate.value) {
+      params.date = selectedDate.value
+    } else if (selectedMonth.value) {
       params.month = selectedMonth.value
     }
     const response = await axios.get(CURVE_DATA_API, {
@@ -483,6 +938,8 @@ const fetchCurveDataByNameIds = async (nameIds) => {
     })
     if (response.data.code === 200) {
       const dataList = response.data.data || []
+      // 清空旧数据
+      curveDataMap.value = {}
       // 按 nameId 分组
       const grouped = {}
       dataList.forEach(item => {
@@ -497,7 +954,6 @@ const fetchCurveDataByNameIds = async (nameIds) => {
         grouped[key].sort((a, b) => new Date(a.realTime) - new Date(b.realTime))
       }
       curveDataMap.value = grouped
-      console.log('已加载曲线数据:', curveDataMap.value)
     } else {
       console.error('获取曲线数据失败:', response.data.message)
     }
@@ -585,6 +1041,17 @@ const generateCurveData = (curve, index, pointCount) => {
 
 // 渲染 ECharts
 const renderChart = () => {
+  // DOM 未准备好时，延迟重试
+  if (!chartRef.value) {
+    setTimeout(renderChart, 100)
+    return
+  }
+  if (currentCurves.value.length === 0) return
+
+  doRenderChart()
+}
+
+const doRenderChart = () => {
   if (!chartRef.value || currentCurves.value.length === 0) return
 
   if (!chart) {
@@ -628,7 +1095,7 @@ const renderChart = () => {
     const isSecondary = curve.curveType === 2
 
     return {
-      name: `曲线 ${curve.curveNameId}`,
+      name: getCurveDisplayName(curve.curveNameId),
       type: 'line',
       yAxisIndex: isSecondary ? 1 : 0,
       data: data,
@@ -761,7 +1228,6 @@ const renderChart = () => {
   chart.setOption(option, true)
 }
 
-// 窗口resize处理
 const handleResize = () => {
   if (chart) chart.resize()
 }
@@ -999,6 +1465,42 @@ onBeforeUnmount(() => {
   align-items: center;
   width: 100%;
   padding: 8px 0;
+  cursor: pointer;
+}
+
+.date-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 6px 8px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.date-header:hover {
+  background: rgba(64, 158, 255, 0.1);
+}
+
+.date-header.active {
+  background: rgba(64, 158, 255, 0.15);
+  color: #409EFF;
+}
+
+.date-label {
+  font-weight: 600;
+  font-size: 13px;
+  color: #606266;
+}
+
+.expand-icon {
+  transition: transform 0.3s;
+  margin-left: 5px;
+}
+
+.expand-icon.expanded {
+  transform: rotate(90deg);
 }
 
 .group-item-label {
@@ -1066,6 +1568,35 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex: 1;
+}
+
+.title-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.tab-item {
+  padding: 8px 20px;
+  background: #f0f0f0;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  font-size: 14px;
+  color: #606266;
+  user-select: none;
+}
+
+.tab-item:hover {
+  background: #e6e6e6;
+  color: #409EFF;
+}
+
+.tab-item.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
 }
 
 .header-title {
@@ -1165,5 +1696,74 @@ onBeforeUnmount(() => {
   .group-meta {
     flex-wrap: wrap;
   }
+}
+
+/* 曲线对比视图样式 */
+.compare-container {
+  padding: 20px;
+}
+
+.compare-empty {
+  padding: 60px 20px;
+}
+
+.compare-content {
+  min-height: 400px;
+}
+
+.compare-devices-header {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f5f7fa;
+  border-radius: 8px;
+}
+
+.compare-devices-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #606266;
+  margin-bottom: 12px;
+}
+
+.compare-devices-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.compare-device-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.device-tag-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.device-tag-name {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.device-tag-date {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.compare-chart {
+  width: 100%;
+  height: 500px;
+  border-radius: 12px;
+  overflow: hidden;
 }
 </style>
