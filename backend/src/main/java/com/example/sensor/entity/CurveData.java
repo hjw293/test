@@ -1,0 +1,64 @@
+package com.example.sensor.entity;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.io.Serializable;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
+/**
+ * 曲线数据实体类
+ */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@TableName("curve_data")
+public class CurveData implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    /** 主键ID */
+    @TableId(type = IdType.AUTO)
+    private Integer id;
+
+    /** 曲线名称ID，关联 log_curve_group.curve_name_id */
+    @TableField("name_id")
+    private String nameId;
+
+    /** 曲线名称 */
+    @TableField(exist = false)
+    private String name;
+
+    /** 时间戳 */
+    private String timestamp;
+
+    /** 实时时间 */
+    @TableField("real_time")
+    private LocalDateTime realTime;
+
+    /** 月份 (格式: yyyy-MM) */
+    private String month;
+
+    /** 日期 (格式: MM-dd)，从数据库date列获取 */
+    @TableField("date")
+    private String date;
+
+    public String getDate() {
+        return date;
+    }
+
+    public void setDate(String date) {
+        this.date = date;
+    }
+
+    /** 数值 */
+    private Double value;
+}

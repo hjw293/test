@@ -1,0 +1,76 @@
+import { createRouter, createWebHistory } from 'vue-router'
+import Login from './Login.vue'
+import NavigationPage from './NavigationPage.vue'
+import Dashboard from './Dashboard.vue'
+import AlarmConfig from './AlarmConfig.vue'
+import BatchReportConfig from './BatchReportConfig.vue'
+import CurveGroup from './CurveGroup.vue'
+
+const routes = [
+  {
+    path: '/',
+    name: 'Home',
+    component: Login
+  },
+  {
+    path: '/login',
+    name: 'Login',
+    component: Login
+  },
+  {
+    path: '/navigation',
+    name: 'Navigation',
+    component: NavigationPage,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/dashboard',
+    name: 'Dashboard',
+    component: Dashboard,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/alarm-config',
+    name: 'AlarmConfig',
+    component: AlarmConfig,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/batch-report-config',
+    name: 'BatchReportConfig',
+    component: BatchReportConfig,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/curve-group',
+    name: 'CurveGroup',
+    component: CurveGroup,
+    meta: { requiresAuth: true }
+  }
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes
+})
+
+// 路由守卫
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('token')
+
+  if (to.meta.requiresAuth && !token) {
+    // 需要登录但没有token，跳转到登录页
+    next('/login')
+  } else if (to.path === '/' || to.path === '/login') {
+    // 根路径或登录页：如果已登录则跳转到导航页
+    if (token) {
+      next('/navigation')
+    } else {
+      next()
+    }
+  } else {
+    next()
+  }
+})
+
+export default router

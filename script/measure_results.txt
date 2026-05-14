@@ -1,0 +1,20 @@
+﻿Starting at 03/27/2026 09:43:07
+Sent FLUSHALL
+-- Cold-cache tests (first 5 requests after FLUSHALL) --
+cold#1: 4845.4447 ms
+cold#2: 4832.2513 ms
+cold#3: 4641.5841 ms
+cold#4: 4605.3137 ms
+cold#5: 4531.0454 ms
+-- Warm-cache tests (next 10 requests) --
+warm#1: 4690.4554 ms
+warm#2: 4554.7702 ms
+warm#3: 4657.9725 ms
+warm#4: 4527.3728 ms
+warm#5: 4422.585 ms
+warm#6: 4641.6883 ms
+warm#7: 4572.9649 ms
+warm#8: 4599.457 ms
+warm#9: 4546.5452 ms
+warm#10: 4522.3783 ms
+Finished at 03/27/2026 09:44:16

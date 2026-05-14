@@ -1,0 +1,71 @@
+package com.example.sensor.entity;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.io.Serializable;
+import java.time.LocalDateTime;
+
+/**
+ * 传感器数据实体类
+ */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@TableName("sensor_data")
+public class SensorData implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    /**
+     * 主键ID
+     */
+    @TableId(type = IdType.AUTO)
+    private Long id;
+
+    /**
+     * 设备名称
+     */
+    private String device;
+
+    /**
+     * 月份（计算字段，不在数据库中）
+     */
+    @TableField(exist = false)
+    private String month;
+
+    /**
+     * 日期（计算字段，不在数据库中）
+     */
+    @TableField(exist = false)
+    private String date;
+
+    /**
+     * 时间戳（毫秒）
+     */
+    private Long timestamp;
+
+    /**
+     * 传感器数值
+     */
+    private Double value;
+
+    /**
+     * 实时时间（格式：2026-03-17 17:09:18）
+     */
+    @TableField("real_time")
+    private String realTime;
+
+    /**
+     * 创建时间
+     */
+    @TableField("created_at")
+    private LocalDateTime createdAt;
+}
